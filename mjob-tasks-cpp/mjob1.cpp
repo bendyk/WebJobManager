@@ -42,31 +42,31 @@ int main(int argc, char **argv) {
     std::cerr << "please specify outpath." << std::endl;
     return 1;
   }
-        // declare all the zises
-        int32_t maxNum = 500000;
-        int32_t arrayElements = maxNum;
+  // declare all the sizes
+  const int32_t maxNum = 500000;
+  const int32_t arrayElements = maxNum;
 
-        // the arrays
-        int32_t unsorted1[arrayElements/2];
-        int32_t unsorted2[arrayElements/2];
+  // the arrays
+  int32_t unsorted1[arrayElements/2];
+  int32_t unsorted2[arrayElements/2];
 
-        // fill the arrays with random numbers
-        unsortedArrays(unsorted1, unsorted2, arrayElements/2);
-        std::string outRes1, outRes2;
+  // fill the arrays with random numbers
+  unsortedArrays(unsorted1, unsorted2, arrayElements/2);
+  std::string outRes1, outRes2;
 
-        arrayToString(unsorted1, arrayElements/2, outRes1);
-        arrayToString(unsorted2, arrayElements/2, outRes2);
+  arrayToString(unsorted1, arrayElements/2, outRes1);
+  arrayToString(unsorted2, arrayElements/2, outRes2);
 
-        // output arrays to file
-        //std::string p1("./blub");
-        std::string p1(argv[1]);
-        p1 += ".arr1";
-        //std::string p2("./blub");
-        std::string p2(argv[1]);
-        p2 += ".arr2";
-        outputResult(outRes1, p1);
-        outputResult(outRes2, p2);
-	std::cout << "finished" << std::endl;
-        return 0;
+  // output arrays to file
+  std::string p1(argv[1]);
+  p1 += ".arr1";
+  std::string p2(argv[1]);
+  p2 += ".arr2";
+  outputResult(outRes1, p1);
+  outputResult(outRes2, p2);
+
+  std::cout << "finished creating unsorted arrays" << std::endl;
+
+  return 0;
 }
 

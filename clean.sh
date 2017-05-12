@@ -1,5 +1,5 @@
 #!/bin/sh
 
-rm blub.*
+rm data.*
 echo "Temporary files are deleted."
 

@@ -11,6 +11,7 @@ class Machine:
         self.task   = task
         self.__busy = True
         self.task.start(self.connection)
+        print("Machine: Assigned task %s." % task.executable)
 
 
     def is_busy(self):

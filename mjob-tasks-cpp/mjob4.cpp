@@ -79,37 +79,46 @@ void outputResult(const std::string& data, const std::string& path) {
 
 int main(int argc, char **argv) {
 
-if (argc < 3) {
-  std::cerr << "Please specify two input files" << std::endl;
-  return 1;
-}
+  if (argc < 3) {
+    std::cerr << "Please specify two input files" << std::endl;
+    return 1;
+  }
 
-		// declare the local unsorted1 array and it's size for the local functions
-    int32_t arraySize = 500000/2;
-    int32_t *sorted1 = new int32_t[arraySize];
-    int32_t *sorted2 = new int32_t[arraySize];
-    int32_t *merged = new int32_t[arraySize*2];
+  // declare the local unsorted1 array and it's size for the local functions
+  const int32_t arraySize = 500000/2;
+  int32_t *sorted1 = new int32_t[arraySize];
+  int32_t *sorted2 = new int32_t[arraySize];
+  int32_t *merged = new int32_t[arraySize*2];
 
-    // read from file
-    std::string inp1(argv[1]);
-    std::string inp2(argv[2]);
-    readInput(inp1, sorted1, arraySize);
-    readInput(inp2, sorted2, arraySize);
+  // read from file
+  std::string inp1(argv[1]);
+  std::string inp2(argv[2]);
+  readInput(inp1, sorted1, arraySize);
+  readInput(inp2, sorted2, arraySize);
 
-    // merge sort
-    mergeSort(sorted1, arraySize, sorted2, arraySize, merged, arraySize*2);
-    
-    // convert result to string object
-    std::string outRes1;
-    arrayToString(merged, arraySize*2, outRes1);
-    delete[] sorted1;
-    delete[] sorted2;
-    delete[] merged;
+  // merge sort
+  mergeSort(sorted1, arraySize, sorted2, arraySize, merged, arraySize*2);
   
-    // write result
-    std::string outpath(inp1 + ".merged");
-    outputResult(outRes1, outpath);
+  // convert result to string object
+  std::string outRes1;
+  arrayToString(merged, arraySize*2, outRes1);
+  delete[] sorted1;
+  delete[] sorted2;
+  delete[] merged;
 
+  // write result
+  std::string outpath(inp1);
+  size_t lim = outpath.find_last_of('.');
+  if (lim != std::string::npos && outpath.size() >= (lim + 4)) { // assume outpath is: *.srt+
+    outpath[lim+1] = 'm';
+    outpath[lim+2] = 'r';
+    outpath[lim+3] = 'g';
+    outpath[lim+4] = 'e';
+  }
+
+  outputResult(outRes1, outpath);
+
+  std::cout << "Merged sorted content" << std::endl;
   return 0;
 }
 
