@@ -62,11 +62,11 @@ def run():
 
             if alltasksdone:
                 break
-            
         print("all tasks done.")
 
     except(KeyboardInterrupt, SystemExit):
         print("Main: Exception occured.")
+
     finally:
         print("\nshutdown HttpServer")
         httpd.shutdown()
