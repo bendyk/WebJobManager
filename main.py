@@ -15,20 +15,20 @@ from server.task import Task
 machines = []
 tasks    = []
 
-task1 = Task("./a.out.js", ["./blub"])
+task1 = Task("./mjob-tasks-js/mjob1.js", ["./blub"])
 task1.output_files(["./blub.arr1", "./blub.arr2"])
 
-task2 = Task("./a2.out.js", ["./blub.arr1"])
+task2 = Task("./mjob-tasks-js/mjob2.js", ["./blub.arr1"])
 task2.input_files(["./blub.arr1"])
 task2.output_files(["./blub.arr1.sort"])
 task2.depends_on(task1)
 
-task3 = Task("./a2.out.js", ["./blub.arr2"])
+task3 = Task("./mjob-tasks-js/mjob2.js", ["./blub.arr2"])
 task3.input_files(["./blub.arr2"])
 task3.output_files(["./blub.arr2.sort"])
 task3.depends_on(task1)
 
-task4 = Task("./a4.out.js", ["./blub.arr1.sort", "./blub.arr2.sort"])
+task4 = Task("./mjob-tasks-js/mjob4.js", ["./blub.arr1.sort", "./blub.arr2.sort"])
 task4.input_files(["./blub.arr1.sort", "./blub.arr2.sort"])
 task4.output_files(["./blub.arr1.sort.merged"])
 task4.depends_on(task2)
