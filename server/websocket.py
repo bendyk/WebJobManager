@@ -147,7 +147,7 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
 
         fin      = recv[0] >> 7
         op_code  = recv[0] %  2**4
-        print((op_code))
+        print('WSConnection: OP_CODE= %d' % (op_code))
 
         if (op_code == 1) | (op_code == 2) | (op_code == 0):
             self.recv_text(fin)
@@ -158,7 +158,8 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
         elif op_code == 10:
             self.recv_pong()
         else:
-            raise ValueError('WSConnection: Unsupported op_code')
+            print('WSConnection: Not supported op_code.')
+            #raise ValueError('WSConnection: Unsupported op_code')
 
 
     def recv_text(self, fin):

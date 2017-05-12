@@ -15,7 +15,6 @@ from server.task import Task
 machines = []
 tasks    = []
 
-#task1 = Task("./a.chunk.js", ["./blub"])
 task1 = Task("./a.out.js", ["./blub"])
 task1.output_files(["./blub.arr1", "./blub.arr2"])
 
@@ -32,12 +31,12 @@ task3.depends_on(task1)
 task4 = Task("./a4.out.js", ["./blub.arr1.sort", "./blub.arr2.sort"])
 task4.input_files(["./blub.arr1.sort", "./blub.arr2.sort"])
 task4.output_files(["./blub.arr1.sort.merged"])
-#task4.depends_on(task2)
-#task4.depends_on(task3)
+task4.depends_on(task2)
+task4.depends_on(task3)
 
-#tasks.append(task1)
-#tasks.append(task2)
-#tasks.append(task3)
+tasks.append(task1)
+tasks.append(task2)
+tasks.append(task3)
 tasks.append(task4)
 
 def run():
@@ -53,18 +52,22 @@ def run():
         print("Running HttpServer on port 8888")
 
         while True:
+            alltasksdone = True
             for task in tasks:
                 if task.ready() and not task.done:
                     execute(task)
+                
+                if not task.done:
+                    alltasksdone = False
 
-            time.sleep(1)           
+            if alltasksdone:
+                break
             
-        while True:
-            time.sleep(1)
-#            for addr in list(wsd.get_connections()):
-#                wsd.send_to(addr, "New time:" + str(time.time()), callback)
+        print("all tasks done.")
 
     except(KeyboardInterrupt, SystemExit):
+        print("Main: Exception occured.")
+    finally:
         print("\nshutdown HttpServer")
         httpd.shutdown()
         print("shutdown WebSocketServer")
@@ -80,11 +83,7 @@ def execute(task):
                 started = True
                 break
 
-        time.sleep(1)
-
-
-def dependencies(task):
-    return True
+        #time.sleep(1)
 
 
 def on_newConnection(connection):
