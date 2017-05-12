@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
 
     std::string outRes1;
     arrayToString(unsorted1, arraySize, outRes1);
-    delete unsorted1;
+    delete[] unsorted1;
 
     // write to result file
     std::string outpath(argv[1]);

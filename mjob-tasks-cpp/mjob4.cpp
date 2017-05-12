@@ -102,9 +102,9 @@ if (argc < 3) {
     // convert result to string object
     std::string outRes1;
     arrayToString(merged, arraySize*2, outRes1);
-    delete sorted1;
-    delete sorted2;
-    delete merged;
+    delete[] sorted1;
+    delete[] sorted2;
+    delete[] merged;
   
     // write result
     std::string outpath(inp1 + ".merged");
