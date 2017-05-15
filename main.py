@@ -40,8 +40,6 @@ tasks.append(task1)
 tasks.append(task2)
 tasks.append(task3)
 tasks.append(task4)
-# TODO bugfix: full workflow with 500000 integers fails to produce correct result
-# but if each task is called separately, the result is correct (but browser hangs for some time even after result was completely transmitted to server)
 
 def run():
 
