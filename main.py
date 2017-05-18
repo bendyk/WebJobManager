@@ -15,22 +15,24 @@ from server.task import Task
 machines = []
 tasks    = []
 
-task1 = Task("./a.out.js", ["./blub"])
-task1.output_files(["./blub.arr1", "./blub.arr2"])
+task1 = Task("./mjob-tasks-js/mjob1.js", ["./data"])
+genFiles = ["./data.arr1", "./data.arr2"]
+task1.output_files(genFiles)
 
-task2 = Task("./a2.out.js", ["./blub.arr1"])
-task2.input_files(["./blub.arr1"])
-task2.output_files(["./blub.arr1.sort"])
+task2 = Task("./mjob-tasks-js/mjob2.js", [genFiles[0]])
+task2.input_files([genFiles[0]])
+sortFiles = ["./data.srt1", "./data.srt2"]
+task2.output_files([sortFiles[0]])
 task2.depends_on(task1)
 
-task3 = Task("./a2.out.js", ["./blub.arr2"])
-task3.input_files(["./blub.arr2"])
-task3.output_files(["./blub.arr2.sort"])
+task3 = Task("./mjob-tasks-js/mjob2.js", [genFiles[1]])
+task3.input_files([genFiles[1]])
+task3.output_files([sortFiles[1]])
 task3.depends_on(task1)
 
-task4 = Task("./a4.out.js", ["./blub.arr1.sort", "./blub.arr2.sort"])
-task4.input_files(["./blub.arr1.sort", "./blub.arr2.sort"])
-task4.output_files(["./blub.arr1.sort.merged"])
+task4 = Task("./mjob-tasks-js/mjob4.js", sortFiles)
+task4.input_files(sortFiles)
+task4.output_files(["./data.mrge"])
 task4.depends_on(task2)
 task4.depends_on(task3)
 
@@ -52,16 +54,25 @@ def run():
         print("Running HttpServer on port 8888")
 
         while True:
+            alltasksdone = True
             for task in tasks:
                 if task.ready() and not task.done:
                     execute(task)
+                
+                if alltasksdone and not task.done:
+                    alltasksdone = False
 
-            time.sleep(1)           
-            
-        while True:
+            if alltasksdone:
+                break
+
             time.sleep(1)
+        
+        print("all tasks done.")
 
     except(KeyboardInterrupt, SystemExit):
+        print("Main: Exception occured.")
+
+    finally:
         print("\nshutdown HttpServer")
         httpd.shutdown()
         print("shutdown WebSocketServer")
@@ -78,10 +89,6 @@ def execute(task):
                 break
 
         time.sleep(1)
-
-
-def dependencies(task):
-    return True
 
 
 def on_newConnection(connection):

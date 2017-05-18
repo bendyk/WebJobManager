@@ -1,4 +1,5 @@
 import os
+import os.path
 import sys
 import time
 from http.server import BaseHTTPRequestHandler
@@ -12,6 +13,9 @@ class RequestHandler(BaseHTTPRequestHandler):
     main_html = """
         <!DOCTYPE html>
         <html>
+          <head>
+            <meta charset="utf-8" />
+          </head>
           <body>
 
             <h1>Websocket Test</h1>
@@ -43,10 +47,15 @@ class RequestHandler(BaseHTTPRequestHandler):
         s.send_header("Content-type", "text/html")
         s.end_headers()
 
-
+        #print("Get-request: %s" % s.path)
         if len(s.path) > 1:
-            with open(s.path.split("/")[-1], "rb") as f:
-                s.wfile.write(f.read())
+            filepath = s.path.split('/')[-1]
+            # first check if file exists
+            if os.path.isfile(filepath):
+                with open(s.path.split("/")[-1], "rb") as f:
+                    s.wfile.write(f.read())
+            else:
+                s.send_error(404, "File not found")
         else: 
             s.wfile.write(bytes(s.main_html, "utf-8"))
 

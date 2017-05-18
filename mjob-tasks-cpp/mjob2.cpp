@@ -8,12 +8,12 @@
 #include <time.h>
 
 // bubble sort function
-    void bubbleSort(int32_t array[], int32_t &arrAize) {
+    void bubbleSort(int32_t array[], int32_t arrSize) {
         int32_t c, d, swap;
 
         // sort the elements
-        for (c = 0 ; c < ( arrAize - 1 ); c++) {
-            for (d = 0 ; d < arrAize - c - 1; d++) {
+        for (c = 0 ; c < ( arrSize - 1 ); c++) {
+            for (d = 0 ; d < arrSize - c - 1; d++) {
                 if (array[d] > array[d + 1]) { /* For decreasing order use < */
                     swap = array[d];
                     array[d] = array[d + 1];
@@ -64,7 +64,7 @@ void readInput(const std::string& path, int32_t *arr, int32_t size) {
 int main(int argc, char **argv) {
 
 		// declare the local unsorted1 array and it's size for the local functions
-    int32_t arraySize = 500000/2;
+    const  int32_t arraySize = 500000/2;
     int32_t *unsorted1 = new int32_t[arraySize];
 
     // read from file
@@ -76,13 +76,20 @@ int main(int argc, char **argv) {
 
     std::string outRes1;
     arrayToString(unsorted1, arraySize, outRes1);
-    delete unsorted1;
+    delete[] unsorted1;
 
     // write to result file
     std::string outpath(argv[1]);
-    outpath += ".sort";
+    size_t lim = outpath.find_last_of('.');
+    if (lim != std::string::npos && outpath.size() >= (lim + 3)) { // assume outpath is: *.arr+
+      outpath[lim+1] = 's';
+      outpath[lim+2] = 'r';
+      outpath[lim+3] = 't';
+    }
 
     outputResult(outRes1, outpath);
+
+    std::cout << "Sorted content of file " << readpath << " to file " << outpath << std::endl;
     return 0;
 }
 

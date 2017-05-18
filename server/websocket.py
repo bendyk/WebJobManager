@@ -136,7 +136,7 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
 
         last += data.encode()
         self.connection.send(last)
-        print("data send")
+        print("WSConnection: data send")
 
 
 
@@ -147,7 +147,7 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
 
         fin      = recv[0] >> 7
         op_code  = recv[0] %  2**4
-        print((op_code))
+        print('WSConnection: OP_CODE= %d' % (op_code))
 
         if (op_code == 1) | (op_code == 2) | (op_code == 0):
             self.recv_text(fin)
@@ -158,7 +158,8 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
         elif op_code == 10:
             self.recv_pong()
         else:
-            raise ValueError('WSConnection: Unsupported op_code')
+            print('WSConnection: Not supported op_code.')
+            #raise ValueError('WSConnection: Unsupported op_code')
 
 
     def recv_text(self, fin):
@@ -172,7 +173,7 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
             if not mask_bit:
                 raise ValueError('WSConnection: Message from client not masked')
 
-            if   length == 126:
+            if length == 126:
                 recv     = self.connection.recv(2)
                 length   = int.from_bytes(recv, byteorder='big')
 
@@ -181,7 +182,7 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
                 length   = int.from_bytes(recv, byteorder='big')
 
             mask = self.connection.recv(4)
-            print("Länge %d" %length)
+            print("WSConnection: Received %d bytes" % length)
 
             remaining = length
 
@@ -196,8 +197,7 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
             data = data.decode()
             print("FIN %s" % "True" if fin else "False") 
             if len(data) < 50:
-                print(data)
-            #print("DATA RECEIVED")
+                print("WSConnection: Data dump: '%s'" % data)
 
 
     def recv_ping(self):

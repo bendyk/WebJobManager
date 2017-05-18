@@ -10,6 +10,7 @@ class Task:
         self.done         = False
         self.executable   = executable
         self.dependencies = []
+        self.in_execution = False
 
 
     def input_files(self, file_list):
@@ -25,18 +26,16 @@ class Task:
 
 
     def ready(self):
-        ready = True
-
         for task in self.dependencies:
             if not task.done:
-                ready = False
-
-        return ready
+                return False
+        return not self.in_execution
 
 
     def start(self, connection):
         self.start_time = time.time()
         data = []
+        self.in_execution = True
 
         if self.in_files:
             self.__append_input(data)
@@ -100,4 +99,5 @@ class Task:
 
         if (self.received >= len(self.out_files)) and not self.done:
             self.done = True
-            print("Task %s done in %f" % (self.executable, time.time()-self.start_time))
+            self.in_execution = False
+            print("Task %s done in %f s" % (self.executable, time.time()-self.start_time))
