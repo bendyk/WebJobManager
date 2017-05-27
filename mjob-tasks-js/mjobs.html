@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Example for a bubblesorting workflow</title>
+
+<style type="text/css">
+body {
+	margin: 40px auto;
+	max-width: 650px;
+	line-height: 1.6;
+	font-size: 18px;
+	color: #444;
+	padding: 0 10px
+}
+
+h1,h2,h3 {
+	line-height: 1.2
+}
+</style>
+</head>
+
+<body>
+
+<header>
+	<h1>Bubblesort Workflow</h1>
+	<aside>Consisting of 3 jobs: mjob1, mjob2, and mjob4.</aside>
+</header>
+
+<h2>Status information</h2>
+<h3>Number of elements</h3>
+<p id="numelems"></p>
+
+<h3>mJob1</h3>
+<p id="mjob1status"></p>
+
+<h3>mJob2-A</h3>
+<p id="mjob2Astatus"></p>
+<h3>mJob2-B</h3>
+<p id="mjob2Bstatus"></p>
+
+<h3>mJob4</h3>
+<p id="mjob4status"></p>
+
+<h3>Result</h3>
+<p id="result"></p>
+
+<script type="text/javascript">
+const NUMBER_ELEMENTS = 100000;
+
+function mjob1Run() {
+	var data1 = [];
+	var data2 = []; 
+
+	for(i = 0; i < NUMBER_ELEMENTS/2; ++i) {
+		data1.push(NUMBER_ELEMENTS - i);
+		data2.push(NUMBER_ELEMENTS/2 - i);
+    }
+
+	return [data1, data2];
+}
+
+function mjob2Run(datarr) {
+	var swap;
+    // bubblesort the elements
+    for (c = 0; c < (datarr.length - 1); ++c) {
+		for (d = 0; d < datarr.length - c - 1; ++d) {
+			if (datarr[d] > datarr[d + 1]) {
+				swap = datarr[d];
+				datarr[d] = datarr[d + 1];
+                datarr[d + 1] = swap;
+            }
+        }
+    }
+	
+	return datarr;
+}
+
+
+function mjob4Run(datarr1, datarr2) {
+	var sorted = [];
+
+	var indexA = 0;
+	var indexB = 0;
+
+	while ((indexA < datarr1.length) && (indexB < datarr2.length)) {
+		if (datarr1[indexA] < datarr2[indexB]) {
+			sorted.push(datarr1[indexA]);
+			++indexA;
+		}
+		else {
+			sorted.push(datarr2[indexB]);
+			++indexB;
+		}
+	}
+		
+	// move remaining elements to end of new array when one merging array is empty
+	while (indexA < datarr1.length) {
+		sorted.push(datarr1[indexA]);
+		++indexA;
+	}
+	while (indexB < datarr2.length) {
+		sorted.push(datarr2[indexB]);
+		++indexB;
+	}
+
+	return sorted;
+}
+
+function autorun() {
+	document.getElementById("numelems").innerText = NUMBER_ELEMENTS + " entries";
+
+	document.getElementById("mjob1status").innerText = "executing...";
+	var tmJob1Pre = new Date();
+	var unsorted = mjob1Run();
+	var tmJob1Post = new Date();
+	var tmJob1Diff = (tmJob1Post - tmJob1Pre) / 1000; // express in seconds
+	document.getElementById("mjob1status").innerText = "done, duration= " + tmJob1Diff + "s";
+
+
+	document.getElementById("mjob2Astatus").innerText = "executing...";
+	var tmJob2APre = new Date();
+	var sorted1 = mjob2Run(unsorted[0]);
+	var tmJob2APost = new Date();
+	var tmJob2ADiff = (tmJob2APost - tmJob2APre) / 1000; // express in seconds
+	document.getElementById("mjob2Astatus").innerText = "done, duration= " + tmJob2ADiff + "s";
+
+	document.getElementById("mjob2Bstatus").innerText = "executing...";
+	var tmJob2BPre = new Date();
+	var sorted2 = mjob2Run(unsorted[1]);
+	var tmJob2BPost = new Date();
+	var tmJob2BDiff = (tmJob2BPost - tmJob2BPre) / 1000; // express in seconds
+	document.getElementById("mjob2Bstatus").innerText = "done, duration= " + tmJob2BDiff + "s";
+
+	document.getElementById("mjob4status").innerText = "executing...";
+	var tmJob4Pre = new Date();
+	var merged = mjob4Run(sorted1, sorted2);
+	var tmJob4Post = new Date();
+	var tmJob4Diff = (tmJob4Post - tmJob4Pre) / 1000; // express in seconds
+	document.getElementById("mjob4status").innerText = "done, duration= " + tmJob4Diff + "s";
+
+	var outstr = "";
+	for (i = 0; i < merged.length; ++i) {
+		outstr += merged[i];
+		if (i < (merged.length - 1))
+			outstr += ", ";
+	}
+	document.getElementById("result").innerText = outstr;
+}
+
+if (window.addEventListener) 
+	window.addEventListener("load", autorun, false);
+else if (window.attachEvent) 
+	window.attachEvent("onload", autorun);
+else 
+	window.onload = autorun;
+</script> 
+</body>
+
+</html>
