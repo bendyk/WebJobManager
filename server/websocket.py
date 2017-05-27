@@ -58,6 +58,7 @@ class WSServer(threading.Thread):
 
 class WSConnection(threading.Thread):
 
+
     template_handshake = '\
 HTTP/1.1 101 Web Socket Protocol Handshake\r\n\
 Upgrade: websocket\r\n\
@@ -65,6 +66,8 @@ Connection: Upgrade\r\n\
 Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
 '
 
+    BINARY        = 0
+    TEXT          = 1
     MAX_FRAG_SIZE = 2**63-1
     closed        = False
 
@@ -74,23 +77,15 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
         print("WSConnection request from %s:%d" % address)
         self.connection = client
         self.address    = address
-        self.callback   = None
+        self.listener   = None
         self.setDaemon(True)
         self.start()
 
 
     def run(self):
         self.handshake()
-        #try:
-#        f = open("a.out.js", "r")
-#        self.send_data(f.read())
-#        f.close()
         while True:
-            self.recv_data()
-        #except(ValueError):
-        #    print("something went wrong")
-        #    self.shutdown()
-        #    pass
+            self.receive()
 
 
     def handshake(self):
@@ -112,18 +107,25 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
         ha.update("258EAFA5-E914-47DA-95CA-C5AB0DC85B11".encode())
         return base64.b64encode(binascii.unhexlify(ha.hexdigest())).decode('utf-8')
 
+    def send_binary(self, data):
+        self.send_data(data, self.BINARY)
 
-    def send_data(self, data, callback):
-        self.callback = callback
+
+    def send_text(self, data):
+        self.send_data(data, self.TEXT)
+
+
+    def send_data(self, data, data_type):
 	
         for i in range(int(len(data) / self.MAX_FRAG_SIZE)):            
-            frag  = b'\x01\x7f'
+            frag  = b'\x01' if data_type == self.TEXT else b'\x02'
+            frag += b'\x7f'
             frag += (self.MAX_FRAG_SIZE).to_bytes(8, byteorder="big")
             frag += data[:MAX_FRAG_SIZE]
             data = data[MAX_FRAG_SIZE:]
             self.connection.send(frag)
   
-        last = b'\x81'
+        last = b'\x81' if data_type == self.TEXT else b'\x82'
 
         if len(data) < 126:
             last += len(data).to_bytes(1, byteorder="big")
@@ -134,23 +136,22 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
             last += b'\x7f'
             last += len(data).to_bytes(8, byteorder="big")
 
-        last += data.encode()
+        if data_type == self.TEXT: data = data.encode()
+
+        last += data
+
         self.connection.send(last)
-        print("WSConnection: data send")
 
 
 
-    def recv_data(self):
-        ## recv = self.connection.recv(2)
-        ## while not recv[0]
+    def receive(self):
         recv    = self.connection.recv(1)
 
         fin      = recv[0] >> 7
         op_code  = recv[0] %  2**4
-        print('WSConnection: OP_CODE= %d' % (op_code))
 
         if (op_code == 1) | (op_code == 2) | (op_code == 0):
-            self.recv_text(fin)
+            self.recv_data(fin)
         elif op_code == 8:
             self.shutdown()
         elif op_code == 9:
@@ -159,45 +160,46 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
             self.recv_pong()
         else:
             print('WSConnection: Not supported op_code.')
-            #raise ValueError('WSConnection: Unsupported op_code')
 
 
-    def recv_text(self, fin):
-            print("WSConnection: Receive text data")
-            data       = bytearray()
+    def recv_data(self, fin):
+        data       = bytearray()
 
-            recv     = self.connection.recv(1)
-            mask_bit = recv[0] >> 7
-            length   = recv[0] %  2**7
+        recv     = self.connection.recv(1)
+        mask_bit = recv[0] >> 7
+        length   = recv[0] %  2**7
 
-            if not mask_bit:
-                raise ValueError('WSConnection: Message from client not masked')
+        if not mask_bit: raise ValueError('WSConnection: Message from client not masked')
+           
+        length    = self.get_length(length)
+        mask      = self.connection.recv(4)
+        remaining = length
 
-            if length == 126:
-                recv     = self.connection.recv(2)
-                length   = int.from_bytes(recv, byteorder='big')
+        while remaining > 0:
+            read_bytes = 4 if remaining > 4 else remaining
+            recv = self.connection.recv(read_bytes)
 
-            elif length == 127:
-                recv     = self.connection.recv(8)
-                length   = int.from_bytes(recv, byteorder='big')
+            for x in range(len(recv)):
+                data.append(recv[x] ^ mask[x])
+            remaining -= len(recv)
 
-            mask = self.connection.recv(4)
-            print("WSConnection: Received %d bytes" % length)
+        self.listener(data)
 
-            remaining = length
 
-            while remaining > 0:
-                read_bytes = 4 if remaining > 4 else remaining
-                recv = self.connection.recv(read_bytes)
-                for x in range(len(recv)):
-                    data.append(recv[x] ^ mask[x])
-                remaining -= len(recv)
+    def get_length(self, length):
+        if length == 126:
+            recv     = self.connection.recv(2)
+            length   = int.from_bytes(recv, byteorder='big')
 
-            self.callback(data, fin)
-            data = data.decode()
-            print("FIN %s" % "True" if fin else "False") 
-            if len(data) < 50:
-                print("WSConnection: Data dump: '%s'" % data)
+        elif length == 127:
+            recv     = self.connection.recv(8)
+            length   = int.from_bytes(recv, byteorder='big')
+
+        return length
+
+
+    def set_listener(self, listener):
+        self.listener = listener
 
 
     def recv_ping(self):
