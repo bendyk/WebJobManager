@@ -47,98 +47,120 @@ h1,h2,h3 {
 <p id="result"></p>
 
 <script type="text/javascript">
-const NUMBER_ELEMENTS = 100000;
 
-function mjob1Run() {
-	var data1 = [];
-	var data2 = []; 
-
-	for(i = 0; i < NUMBER_ELEMENTS/2; ++i) {
-		data1.push(NUMBER_ELEMENTS - i);
-		data2.push(NUMBER_ELEMENTS/2 - i);
-    }
-
-	return [data1, data2];
+function function_to_url(js_function){
+	var blob = new Blob(['('+ js_function.toString() + ')()'], {type: 'application/javascript'});
+	return URL.createObjectURL(blob);
 }
 
-function mjob2Run(datarr) {
-	var swap;
-    // bubblesort the elements
-    for (c = 0; c < (datarr.length - 1); ++c) {
-		for (d = 0; d < datarr.length - c - 1; ++d) {
-			if (datarr[d] > datarr[d + 1]) {
-				swap = datarr[d];
-				datarr[d] = datarr[d + 1];
-                datarr[d + 1] = swap;
-            }
-        }
-    }
+
+function preautorun(){
+	var wworker;
 	
-	return datarr;
+	if(typeof(Worker) !== undefined){
+		wworker = new Worker(function_to_url(autorun));
+		wworker.onmessage = function (msg){
+			console.log(msg.data);
+			eval(msg.data);
+                };
+        }
+	else {
+		autorun();
+	}
 }
 
 
-function mjob4Run(datarr1, datarr2) {
-	var sorted = [];
+function autorun() {
+	const NUMBER_ELEMENTS = 500000;
 
-	var indexA = 0;
-	var indexB = 0;
+	function mjob1Run() {
+		var data1 = [];
+		var data2 = []; 
 
-	while ((indexA < datarr1.length) && (indexB < datarr2.length)) {
-		if (datarr1[indexA] < datarr2[indexB]) {
+		for(i = 0; i < NUMBER_ELEMENTS/2; ++i) {
+			data1.push(NUMBER_ELEMENTS - i);
+			data2.push(NUMBER_ELEMENTS/2 - i);
+    		}
+
+		return [data1, data2];
+	}
+
+	function mjob2Run(datarr) {
+		var swap;
+    	// bubblesort the elements
+    		for (c = 0; c < (datarr.length - 1); ++c) {
+			for (d = 0; d < datarr.length - c - 1; ++d) {
+				if (datarr[d] > datarr[d + 1]) {
+					swap = datarr[d];
+					datarr[d] = datarr[d + 1];
+                			datarr[d + 1] = swap;
+            			}
+        		}
+    		}
+	
+		return datarr;
+	}
+
+
+	function mjob4Run(datarr1, datarr2) {
+		var sorted = [];
+
+		var indexA = 0;
+		var indexB = 0;
+
+		while ((indexA < datarr1.length) && (indexB < datarr2.length)) {
+			if (datarr1[indexA] < datarr2[indexB]) {
+				sorted.push(datarr1[indexA]);
+				++indexA;
+			}
+			else {
+				sorted.push(datarr2[indexB]);
+				++indexB;
+			}
+		}
+		
+		// move remaining elements to end of new array when one merging array is empty
+		while (indexA < datarr1.length) {
 			sorted.push(datarr1[indexA]);
 			++indexA;
 		}
-		else {
+		while (indexB < datarr2.length) {
 			sorted.push(datarr2[indexB]);
 			++indexB;
 		}
-	}
-		
-	// move remaining elements to end of new array when one merging array is empty
-	while (indexA < datarr1.length) {
-		sorted.push(datarr1[indexA]);
-		++indexA;
-	}
-	while (indexB < datarr2.length) {
-		sorted.push(datarr2[indexB]);
-		++indexB;
-	}
 
-	return sorted;
-}
+		return sorted;
+	}
+	postMessage('document.getElementById("numelems").innerText = "' + NUMBER_ELEMENTS + ' entries";');
 
-function autorun() {
-	document.getElementById("numelems").innerText = NUMBER_ELEMENTS + " entries";
-
-	document.getElementById("mjob1status").innerText = "executing...";
+	postMessage('document.getElementById("mjob1status").innerText = "executing...";');
 	var tmJob1Pre = new Date();
 	var unsorted = mjob1Run();
 	var tmJob1Post = new Date();
 	var tmJob1Diff = (tmJob1Post - tmJob1Pre) / 1000; // express in seconds
-	document.getElementById("mjob1status").innerText = "done, duration= " + tmJob1Diff + "s";
+	postMessage('document.getElementById("mjob1status").innerText = "done, duration= ' + tmJob1Diff + 's";');
 
 
-	document.getElementById("mjob2Astatus").innerText = "executing...";
+	postMessage('document.getElementById("mjob2Astatus").innerText = "executing...";');
 	var tmJob2APre = new Date();
 	var sorted1 = mjob2Run(unsorted[0]);
 	var tmJob2APost = new Date();
 	var tmJob2ADiff = (tmJob2APost - tmJob2APre) / 1000; // express in seconds
-	document.getElementById("mjob2Astatus").innerText = "done, duration= " + tmJob2ADiff + "s";
+	postMessage('document.getElementById("mjob2Astatus").innerText = "done, duration= ' + tmJob2ADiff + 's";');
 
-	document.getElementById("mjob2Bstatus").innerText = "executing...";
+	postMessage('document.getElementById("mjob2Bstatus").innerText = "executing...";');
 	var tmJob2BPre = new Date();
 	var sorted2 = mjob2Run(unsorted[1]);
 	var tmJob2BPost = new Date();
 	var tmJob2BDiff = (tmJob2BPost - tmJob2BPre) / 1000; // express in seconds
-	document.getElementById("mjob2Bstatus").innerText = "done, duration= " + tmJob2BDiff + "s";
+	postMessage('document.getElementById("mjob2Bstatus").innerText = "done, duration= ' + tmJob2BDiff + 's";');
 
-	document.getElementById("mjob4status").innerText = "executing...";
+	postMessage('document.getElementById("mjob4status").innerText = "executing...";');
 	var tmJob4Pre = new Date();
 	var merged = mjob4Run(sorted1, sorted2);
 	var tmJob4Post = new Date();
 	var tmJob4Diff = (tmJob4Post - tmJob4Pre) / 1000; // express in seconds
-	document.getElementById("mjob4status").innerText = "done, duration= " + tmJob4Diff + "s";
+	postMessage('document.getElementById("mjob4status").innerText = "done, duration= ' + tmJob4Diff + 's";');
 
 	var outstr = "";
 	for (i = 0; i < merged.length; ++i) {
@@ -146,13 +168,13 @@ function autorun() {
 		if (i < (merged.length - 1))
 			outstr += ", ";
 	}
-	document.getElementById("result").innerText = outstr;
+	postMessage('document.getElementById("result").innerText = "' + outstr + '";');
 }
 
 if (window.addEventListener) 
-	window.addEventListener("load", autorun, false);
+	window.addEventListener("load", preautorun, false);
 else if (window.attachEvent) 
-	window.attachEvent("onload", autorun);
+	window.attachEvent("onload", preautorun);
 else 
 	window.onload = autorun;
 </script> 

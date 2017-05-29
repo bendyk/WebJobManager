@@ -121,5 +121,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             else:
                 s.send_error(404, "File not found")
         else: 
+            #with open("./mjob-tasks-js/mjobs.html", "r") as f:
+            #    s.wfile.write(bytes(f.read(), "utf-8"))
+
             s.wfile.write(bytes(s.main_html, "utf-8"))
 
