@@ -15,15 +15,15 @@ from server.task import Task
 machines = []
 tasks    = []
 
-#task1 = Task("./montage-tasks-js/mProjectPP.js", ["-X", "-x 0.99330", "2mass-atlas-990502s-j1420198.fits", "p2mass-atlas-990502s-j1420198.fits", "big_region_20170518_153916_25237.hdr"])
-#inFiles  = ["./2mass-atlas-990502s-j1420198.fits", "./big_region_20170518_153916_25237.hdr"]
-#task1.input_files(inFiles)
-#outFiles = ["./p2mass-atlas-990502s-j1420198.fits", "p2mass-atlas-990502s-j1420198_area.fits"]
-#task1.output_files(outFiles)
+task1 = Task("./montage-tasks-js/mProjectPP.js", ["-X", "-x 0.99330", "2mass-atlas-990502s-j1420198.fits", "p2mass-atlas-990502s-j1420198.fits", "big_region_20170518_153916_25237.hdr"])
+inFiles  = ["./2mass-atlas-990502s-j1420198.fits", "./big_region_20170518_153916_25237.hdr"]
+task1.input_files(inFiles)
+outFiles = ["./p2mass-atlas-990502s-j1420198.fits", "p2mass-atlas-990502s-j1420198_area.fits"]
+task1.output_files(outFiles)
 
-task1 = Task("./mjob-tasks-js/mjob1.js", ["data"])
+#task1 = Task("./mjob-tasks-js/mjob1.js", ["data"])
 genFiles = ["data.arr1", "data.arr2"]
-task1.output_files(genFiles)
+#task1.output_files(genFiles)
 
 task2 = Task("./mjob-tasks-js/mjob2.js", [genFiles[0]])
 task2.input_files([genFiles[0]])
@@ -43,9 +43,9 @@ task4.depends_on(task2)
 task4.depends_on(task3)
 
 tasks.append(task1)
-tasks.append(task2)
-tasks.append(task3)
-tasks.append(task4)
+#tasks.append(task2)
+#tasks.append(task3)
+#tasks.append(task4)
 
 def run():
 
