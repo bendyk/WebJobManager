@@ -13,7 +13,7 @@ from server.machine import Machine
 from server.task import Task
 #only import this if youve task specified in tasks.py
 import tasks as pre_tasks
-tasks = pre_tasks
+tasks = pre_tasks.tasks
 #####
 
 machines = []

@@ -185,7 +185,7 @@ task19.output_files(outFiles)
 task19.depends_on(task18)
 tasks.append(task19)
 
-task20 = Task("./montage-tasks-js/mJPEG", ["-ct", "1", "-gray", "mosaic.fits", "min", "max", "gaussianlog", "-out", "mosaic.jpg"])
+task20 = Task("./montage-tasks-js/mJPEG", ["-ct", "1", "-gray", "mosaic.fits", "min", "max", "gaussian", "-out", "mosaic.jpg"])
 inFiles = ["mosaic.fits"]
 outFiles = ["mosaic.jpg"]
 task20.input_files(inFiles)
