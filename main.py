@@ -11,38 +11,42 @@ from server.websocket import WSServer, WSConnection
 from server.http import RequestHandler
 from server.machine import Machine
 from server.task import Task
+#only import this if youve task specified in tasks.py
+import tasks as pre_tasks
+tasks = pre_tasks
+#####
 
 machines = []
-tasks    = []
+#tasks    = []
 
-task1 = Task("./montage-tasks-js/mProjectPP.js", ["-X", "-x 0.99330", "2mass-atlas-990502s-j1420198.fits", "p2mass-atlas-990502s-j1420198.fits", "big_region_20170518_153916_25237.hdr"])
-inFiles  = ["./2mass-atlas-990502s-j1420198.fits", "./big_region_20170518_153916_25237.hdr"]
-task1.input_files(inFiles)
-outFiles = ["./p2mass-atlas-990502s-j1420198.fits", "p2mass-atlas-990502s-j1420198_area.fits"]
-task1.output_files(outFiles)
+#task1 = Task("./montage-tasks-js/mProjectPP.js", ["-X", "-x 0.99330", "2mass-atlas-990502s-j1420198.fits", "p2mass-atlas-990502s-j1420198.fits", "big_region_20170518_153916_25237.hdr"])
+#inFiles  = ["./2mass-atlas-990502s-j1420198.fits", "./big_region_20170518_153916_25237.hdr"]
+#task1.input_files(inFiles)
+#outFiles = ["./p2mass-atlas-990502s-j1420198.fits", "p2mass-atlas-990502s-j1420198_area.fits"]
+#task1.output_files(outFiles)
 
 #task1 = Task("./mjob-tasks-js/mjob1.js", ["data"])
-genFiles = ["data.arr1", "data.arr2"]
+#genFiles = ["data.arr1", "data.arr2"]
 #task1.output_files(genFiles)
 
-task2 = Task("./mjob-tasks-js/mjob2.js", [genFiles[0]])
-task2.input_files([genFiles[0]])
-sortFiles = ["./data.srt1", "./data.srt2"]
-task2.output_files([sortFiles[0]])
-task2.depends_on(task1)
+#task2 = Task("./mjob-tasks-js/mjob2.js", [genFiles[0]])
+#task2.input_files([genFiles[0]])
+#sortFiles = ["./data.srt1", "./data.srt2"]
+#task2.output_files([sortFiles[0]])
+#task2.depends_on(task1)
 
-task3 = Task("./mjob-tasks-js/mjob2.js", [genFiles[1]])
-task3.input_files([genFiles[1]])
-task3.output_files([sortFiles[1]])
-task3.depends_on(task1)
+#task3 = Task("./mjob-tasks-js/mjob2.js", [genFiles[1]])
+#task3.input_files([genFiles[1]])
+#task3.output_files([sortFiles[1]])
+#task3.depends_on(task1)
 
-task4 = Task("./mjob-tasks-js/mjob4.js", sortFiles)
-task4.input_files(sortFiles)
-task4.output_files(["./data.mrge"])
-task4.depends_on(task2)
-task4.depends_on(task3)
+#task4 = Task("./mjob-tasks-js/mjob4.js", sortFiles)
+#task4.input_files(sortFiles)
+#task4.output_files(["./data.mrge"])
+#task4.depends_on(task2)
+#task4.depends_on(task3)
 
-tasks.append(task1)
+#tasks.append(task1)
 #tasks.append(task2)
 #tasks.append(task3)
 #tasks.append(task4)
