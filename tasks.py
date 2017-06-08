@@ -200,7 +200,7 @@ outFiles = ["shrunken.fits"]
 task18.input_files(inFiles)
 task18.output_files(outFiles)
 task18.depends_on(task17)
-#tasks.append(task18)
+tasks.append(task18)
 
 
 task19 = Task("./montage-tasks-js/mJPEG.js", ["-ct", "1", "-gray", "shrunken.fits", "0.00%", "100.00%", "gaussian", "-out", "mosaic.jpg"])
