@@ -6,8 +6,12 @@ class Task:
 var Module        = {};
 var cur_request   = {};
 var request_queue = [];
+var time_prerun   = 0;
+var time_mainrun  = 0;
+var time_postrun  = 0;
 
-function request_input_file(f_name){
+
+function request_input_file(f_name){  
   console.log(  "load file: " + f_name);
   ws.send('\\u0001' + f_name);
 }
@@ -17,7 +21,9 @@ function recv_input_file(msg){
 
   if(request_queue.length == 0){
     console.log("RUNNING ... " + Module['thisProgram']);
-    ws.onmessage = function(msg) {}; 
+    ws.onmessage = function(msg) {};
+    time_prerun  = Date.now() - time_prerun; 
+    time_mainrun = Date.now();
     Module['removeRunDependency'](cur_request["dep_id"]);
   }
   else{
@@ -30,6 +36,7 @@ function recv_input_file(msg){
 
 function load_in_files(){
   console.log("PRERUN...");
+  time_prerun  = Date.now();
   ws.onmessage = recv_input_file;
 
   %(inputs)s
@@ -41,17 +48,23 @@ function load_in_files(){
   }
   else{
     console.log("RUNNING ... " + Module['thisProgram']);
+    time_prerun = Date.now() - time_prerun;
   }
 };
 
 
 function upload_out_files(){
   console.log("POSTRUN...");
-
+  time_mainrun = Date.now() - time_mainrun();
+  time_postrun = Date.now();
   %(outputs)s
 
   ws.onmessage = recv_executable;
   
+  time_postrun = Date.now() - time_postrun;
+  ws.send('\\u0005' + time_prerun);
+  ws.send('\\u0006' + time_mainrun);
+  ws.send('\\u0007' + time_postrun);
   console.log("FINISHED");
   console.log("-------------------");
   request_executable();
@@ -152,4 +165,4 @@ Module['preRun']  = load_in_files;
     def finish(self):
         self.done         = True
         self.in_execution = False
-        print("Task %s done in %f s" % (self.executable, time.time()-self.start_time))
+        print("ABS_TIME %s" % (time.time()-self.start_time))

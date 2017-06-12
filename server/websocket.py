@@ -172,15 +172,13 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
         if not mask_bit: raise ValueError('WSConnection: Message from client not masked')
            
         length    = self.get_length(length)
-        mask      = self.connection.recv(4)
+        mask      = self.connection.recv(4) * 256
         remaining = length
 
         while remaining > 0:
-            read_bytes = 4 if remaining > 4 else remaining
+            read_bytes = 1024 if remaining > 1024 else remaining
             recv = self.connection.recv(read_bytes)
-
-            for x in range(len(recv)):
-                data.append(recv[x] ^ mask[x])
+            data.extend(bytearray(mask[pos] ^ value for pos,value in enumerate(recv)))
             remaining -= len(recv)
 
         self.listener(data)

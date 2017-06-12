@@ -6,6 +6,9 @@ class Machine:
     OUTPUT_FILE = 2
     OUTPUT_PATH = 3
     CLIENT_MSG  = 4
+    PRE_TIME    = 5
+    MAIN_TIME   = 6
+    POST_TIME   = 7
 
 
     def __init__(self, connection):
@@ -61,7 +64,16 @@ class Machine:
             self.recv_file(data)
 
         elif cmd == self.OUTPUT_PATH:
-            self.output_path = (data.decode())
+            self.output_path = data.decode()
 
         elif cmd == self.CLIENT_MSG:
             print("%s: msg %s received" % (self.connection.address[0], data.decode()))
+
+        elif cmd == self.PRE_TIME:
+            print("%s:PRERUN time:" %(self.connection.address[0], data.decode()))
+
+        elif cmd == self.PRE_TIME:
+            print("%s:MAINRUN time:" %(self.connection.address[0], data.decode()))
+
+        elif cmd == self.PRE_TIME:
+            print("%s:POSTRUN time:" %(self.connection.address[0], data.decode()))
