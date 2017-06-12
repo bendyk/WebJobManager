@@ -8,7 +8,7 @@ class Statistics:
     sum_main = 0
     sum_post = 0
     sum_wait = 0
-    lines.append("#nr  #task_name          #absolute #prerun #mainrun #postrun #queue")
+    lines.append("#nr  #task_name          #absolute #prerun #mainrun #postrun #time in queue")
  
 
     with open(f_name, "w") as f:
