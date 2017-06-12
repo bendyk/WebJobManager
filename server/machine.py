@@ -70,10 +70,10 @@ class Machine:
             print("%s: msg %s received" % (self.connection.address[0], data.decode()))
 
         elif cmd == self.PRE_TIME:
-            print("%s:PRERUN time:" %(self.connection.address[0], data.decode()))
+            print("%s:PRERUN time: %s" %(self.connection.address[0], data.decode()))
 
         elif cmd == self.PRE_TIME:
-            print("%s:MAINRUN time:" %(self.connection.address[0], data.decode()))
+            print("%s:MAINRUN time: %s" %(self.connection.address[0], data.decode()))
 
         elif cmd == self.PRE_TIME:
-            print("%s:POSTRUN time:" %(self.connection.address[0], data.decode()))
+            print("%s:POSTRUN time: %s" %(self.connection.address[0], data.decode()))
