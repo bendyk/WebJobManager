@@ -11,6 +11,7 @@ from server.websocket import WSServer, WSConnection
 from server.http import RequestHandler
 from server.machine import Machine
 from server.task import Task
+from util.statistics import Statistics
 #only import this if youve task specified in tasks.py
 import tasks as pre_tasks
 tasks = pre_tasks.tasks
@@ -78,6 +79,7 @@ def run():
             time.sleep(1)
         
         print("all tasks done.")
+        Statistics.save_time_stats("task_times.stats", tasks)
 
     except(KeyboardInterrupt, SystemExit):
         print("Main: Interrupted.")

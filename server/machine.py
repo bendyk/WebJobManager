@@ -1,3 +1,4 @@
+import time
 
 class Machine:
 
@@ -17,11 +18,13 @@ class Machine:
         self.__busy      = True
         self.task        = None
         self.output_path = None
+        self.abs_time    = 0.0
 
 
     def run_task(self, task):
-        self.task   = task
-        self.__busy = True
+        self.abs_time   = time.time()
+        self.task       = task
+        self.__busy     = True
         self.task.start(self.connection)
         print("%s: Task %s assigned" % (self.connection.address[0], task.executable))
 
@@ -31,6 +34,7 @@ class Machine:
 
 
     def set_ready(self):
+        self.abs_time = time.time() - self.abs_time
         if self.task: 
             self.task.finish()
         self.__busy = False
@@ -56,6 +60,7 @@ class Machine:
 
         if cmd == self.EXECUTABLE:
             self.set_ready()
+            print("%s:ABSOLUTE time: %dms" %(self.connection.address[0], int(round(self.abs_time * 1000))))
 
         elif cmd == self.INPUT_FILE:
             self.send_file(data.decode())
@@ -70,10 +75,13 @@ class Machine:
             print("%s: msg %s received" % (self.connection.address[0], data.decode()))
 
         elif cmd == self.PRE_TIME:
-            print("%s:PRERUN time: %s" %(self.connection.address[0], data.decode()))
+            self.task.set_pre_time(int(data.decode()))
+            print("%s:PRERUN time: %sms" %(self.connection.address[0], data.decode()))
 
-        elif cmd == self.PRE_TIME:
-            print("%s:MAINRUN time: %s" %(self.connection.address[0], data.decode()))
+        elif cmd == self.MAIN_TIME:
+            self.task.set_main_time(int(data.decode()))
+            print("%s:MAINRUN time: %sms" %(self.connection.address[0], data.decode()))
 
-        elif cmd == self.PRE_TIME:
-            print("%s:POSTRUN time: %s" %(self.connection.address[0], data.decode()))
+        elif cmd == self.POST_TIME:
+            self.task.set_post_time(int(data.decode()))
+            print("%s:POSTRUN time: %sms" %(self.connection.address[0], data.decode()))
