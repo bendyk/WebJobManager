@@ -55,7 +55,7 @@ function load_in_files(){
 
 function upload_out_files(){
   console.log("POSTRUN...");
-  time_mainrun = Date.now() - time_mainrun();
+  time_mainrun = Date.now() - time_mainrun;
   time_postrun = Date.now();
   %(outputs)s
 
