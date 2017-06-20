@@ -149,6 +149,7 @@ Module['preRun']  = load_in_files;
         for arg in self.args:
             argc += 1
             data.append("arguments['%d'] = \"%s\";" % (argc-1, arg))
+            print("Argument :" + arg)
         data.append("arguments.length = %d;" % argc)
 
 

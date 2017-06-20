@@ -11,13 +11,21 @@ from server.websocket import WSServer, WSConnection
 from server.http import RequestHandler
 from server.machine import Machine
 from server.task import Task
+
 #only import this if youve task specified in tasks.py
 import tasks as pre_tasks
-tasks = pre_tasks.tasks
+#tasks = pre_tasks.tasks
+
 #####
 
 machines = []
-#tasks    = []
+tasks    = []
+
+task1 = Task("./plainjs_test.js", ["aaa.in", "aaa.out"])
+task1.input_files(["aaa.in"])
+task1.output_files(["aaa.out"])
+
+tasks.append(task1)
 
 #task1 = Task("./montage-tasks-js/mProjectPP.js", ["-X", "-x 0.99330", "2mass-atlas-990502s-j1420198.fits", "p2mass-atlas-990502s-j1420198.fits", "big_region_20170518_153916_25237.hdr"])
 #inFiles  = ["./2mass-atlas-990502s-j1420198.fits", "./big_region_20170518_153916_25237.hdr"]
