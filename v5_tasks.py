@@ -2,35 +2,6 @@ from server.task import Task
 
 tasks = []
 
-#task = Task("./montage-tasks-js/mArchiveList.js", ["2MASS", "J", "275.1964", "-16.1717", "eq", "j2000", "0.20", "0.20", "remote_big.tbl"])
-#task.input_files([])
-#task.output_files(["remote_big.tbl"])
-#tasks.append(task)
-
-#task = Task("./montage-tasks-js/mSubset.js", ["-f", "remote_big.tbl", "region.hdr", "remote.tbl"])
-#task.input_files(["remote_big.tbl"])
-#task.output_files(["remote.tbl"])
-#tasks.append(task)
-
-#task = Task("./montage-tasks-js/mArchiveExec.js", ["remote.tbl"])
-#task.input_files(["remote.tbl"])
-#task.output_files()
-#tasks.append(task)
-
-#task = Task("./montage-tasks-js/mArchiveGet.js", ["http://irsa.ipac.caltech.edu/ibe/data/twomass/full/full/990502"])
-#task.input_files(["remote.tbl"])
-#task.output_files()
-#tasks.append(task)
-
-
-#1 path:mArchiveList cmdv[0]:mArchiveList || cmdv[1]:2MASS || cmdv[2]:J || cmdv[3]:275.1964 -16.1717 eq j2000 || cmdv[4]:0.20 || cmdv[5]:0.20 || cmdv[6]:remote_big.tbl || cmdc:7
-#  2 path:mSubset cmdv[0]:mSubset || cmdv[1]:-f || cmdv[2]:remote_big.tbl || cmdv[3]:region.hdr || cmdv[4]:remote.tbl || cmdc:5
-#  3 path:mArchiveExec cmdv[0]:mArchiveExec || cmdv[1]:../remote.tbl || cmdc:2
-#  4 path:mArchiveGet cmdv[0]:mArchiveGet || cmdv[1]:http://irsa.ipac.caltech.edu/ibe/data/twomass/full/full/990502s/s142/image/ji1420198.fits.gz || cmdv[2]:2mass-atlas-990502s-j14    20198.fits || cmdc:3
-#  5 path:mArchiveGet cmdv[0]:mArchiveGet || cmdv[1]:http://irsa.ipac.caltech.edu/ibe/data/twomass/full/full/990502s/s142/image/ji1420186.fits.gz || cmdv[2]:2mass-atlas-990502s-j14    20186.fits || cmdc:3
-#  6 path:mArchiveGet cmdv[0]:mArchiveGet || cmdv[1]:http://irsa.ipac.caltech.edu/ibe/data/twomass/full/full/990502s/s143/image/ji1430080.fits.gz || cmdv[2]:2mass-atlas-990502s-j14    30080.fits || cmdc:3
-#  7 path:mImgtbl cmdv[0]:mImgtbl || cmdv[1]:-c || cmdv[2]:. || cmdv[3]:rimages_full.tbl || cmdc:4
-#  8 path:mCoverageCheck cmdv[0]:mCoverageCheck || cmdv[1]:rimages_full.tbl || cmdv[2]:rimages.tbl || cmdv[3]:-header || cmdv[4]:region.hdr || cmdc:5
 task1 = Task("./montage-tasks-js/mProjectPP", ["-b", "1", "-x", "0.99330", "-X", "2mass-atlas-990502s-j1420198.fits", "p2mass-atlas-990502s-j1420198.fits", "big_region.hdr"])
 inFiles  = ["2mass-atlas-990502s-j1420198.fits", "big_region.hdr"]
 outFiles = ["p2mass-atlas-990502s-j1420198.fits"]
@@ -52,7 +23,8 @@ task3.input_files(inFiles)
 task3.output_files(outFiles)
 tasks.append(task3)
 
-task4 = Task("./montage-tasks-js/mImgtbl", ["-c", "projected", "pimages.tbl"])
+task4 = Task("./montage-tasks-js/mImgtbl", ["-c", ".", "pimages.tbl"])
+inFiles  = ["p2mass-atlas-990502s-j1420198.fits", "p2mass-atlas-990502s-j1420186.fits", "p2mass-atlas-990502s-j1430080.fits"]
 outFiles = ["pimages.tbl"]
 task4.output_files(outFiles)
 task4.depends_on(task1)
@@ -167,8 +139,8 @@ task17.output_files(outFiles)
 task17.depends_on(task12)
 tasks.append(task17)
 
-task18 = Task("./montage-tasks-js/mImgtbl", ["-c", "corrected", "cimages.tbl"])
-inFiles = ["c2mass-atlas*"]
+task18 = Task("./montage-tasks-js/mImgtbl", ["-c", ".", "cimages.tbl"])
+inFiles = ["c2mass-atlas-990502s-j1430080.fits", "c2mass-atlas-990502s-j1420198.fits", "c2mass-atlas-990502s-j1420186.fits"]
 outFiles = ["cimages.tbl"]
 task18.input_files(inFiles)
 task18.output_files(outFiles)
@@ -177,15 +149,15 @@ task18.depends_on(task16)
 task18.depends_on(task17)
 tasks.append(task18)
 
-task19 = Task("./montage-tasks-js/mAdd", ["-p", "corrected", "cimages.tbl", "region.hdr", "mosaic.fits"])
-inFiles = ["cimages.tbl", "region_hdr", "c2mass-atlas*"]
+task19 = Task("./montage-tasks-js/mAdd", ["-p", ".", "cimages.tbl", "region.hdr", "mosaic.fits"])
+inFiles = ["cimages.tbl", "region_hdr", "c2mass-atlas-990502s-j1430080.fits", "c2mass-atlas-990502s-j1420198.fits", "c2mass-atlas-990502s-j1420186.fits"]
 outFiles = ["mosaic.fits"]
 task19.input_files(inFiles)
 task19.output_files(outFiles)
 task19.depends_on(task18)
 tasks.append(task19)
 
-task20 = Task("./montage-tasks-js/mJPEG", ["-ct", "1", "-gray", "mosaic.fits", "min", "max", "gaussian", "-out", "mosaic.jpg"])
+task20 = Task("./montage-tasks-js/mJPEG", ["-ct", "1", "-gray", "mosaic.fits", "0.00%", "100.00%", "gaussian", "-out", "mosaic.jpg"])
 inFiles = ["mosaic.fits"]
 outFiles = ["mosaic.jpg"]
 task20.input_files(inFiles)

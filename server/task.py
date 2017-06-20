@@ -1,4 +1,5 @@
 import time
+import glob
 
 class Task:
 
@@ -83,6 +84,11 @@ Module['preRun']  = load_in_files;
         self.done         = False
         self.executable   = executable
         self.dependencies = []
+        self.pre_time     = 0
+        self.main_time    = 0
+        self.post_time    = 0
+        self.abs_time     = 0
+        self.wait_time    = time.time()
         self.in_execution = False
 
 
@@ -107,8 +113,9 @@ Module['preRun']  = load_in_files;
 
     def start(self, connection):
         data              = []
-        self.start_time   = time.time()
-        self.in_execution = True 
+        self.in_execution = True
+        self.abs_time     = time.time()
+        self.wait_time    = int(round((time.time() - self.wait_time) * 1000)) 
 
         js_inputs  = self.__generate_js_input_files()
         js_outputs = self.__generate_js_output_files()
@@ -124,11 +131,13 @@ Module['preRun']  = load_in_files;
     def __generate_js_input_files(self):
         data = []
 
-        for f_name in self.in_files:
-            data.append("  var dependency_id = getUniqueRunDependency(1);")
-            data.append("  Module['addRunDependency'](dependency_id);") 
-            data.append("  request_queue.push({\"dep_id\": dependency_id,") 
-            data.append("                      \"file\": \"%s\"});" % f_name)
+        for f_path in self.in_files:
+            for f_name in glob.glob(f_path):
+                data.append("  var dependency_id = getUniqueRunDependency(1);")
+                data.append("  Module['addRunDependency'](dependency_id);") 
+                data.append("  request_queue.push({\"dep_id\": dependency_id,") 
+                data.append("                      \"file\": \"%s\"});" % f_name)
+
         return "\n".join(data)
       
 
@@ -136,11 +145,12 @@ Module['preRun']  = load_in_files;
         data      = []
         read_opts = "{encoding:'binary', flags:'r'}"
      
-        for f_name in self.out_files:
-            data.append("  console.log(  \"send file: %s\");" % f_name)
-            data.append("  var file = FS.readFile(\"%s\", %s);" % (f_name, read_opts))
-            data.append("  ws.send('\\u0003' + \"%s\");" % f_name)
-            data.append("  ws.send(new Blob(['\\u0002', file]));")
+        for f_path in self.out_files:
+            for f_name in glob.glob(f_path):
+                data.append("  console.log(  \"send file: %s\");" % f_name)
+                data.append("  var file = FS.readFile(\"%s\", %s);" % (f_name, read_opts))
+                data.append("  ws.send('\\u0003' + \"%s\");" % f_name)
+                data.append("  ws.send(new Blob(['\\u0002', file]));")
         return "\n".join(data)
 
 
@@ -161,9 +171,20 @@ Module['preRun']  = load_in_files;
 
         data.append("//# sourceURL=debugger.js")
 
+   
+    def set_pre_time(self, ms_time):
+        self.pre_time = ms_time
+
+
+    def set_main_time(self, ms_time):
+        self.main_time = ms_time
+
+
+    def set_post_time(self, ms_time):
+        self.post_time = ms_time
 
 
     def finish(self):
         self.done         = True
         self.in_execution = False
-        print("ABS_TIME %s" % (time.time()-self.start_time))
+        self.abs_time     = int(round((time.time() - self.abs_time) * 1000))
