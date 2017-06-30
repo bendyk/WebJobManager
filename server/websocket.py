@@ -30,7 +30,7 @@ class WSServer(threading.Thread):
                     self.__connections[address] = WSConnection(client, address)
                     self.onConnection(self.__connections[address])
                 else:
-                    print("Connection ERROR: Multiple connections from single address")
+                    print("Connection ERROR: Multiple connections from same address")
         except OSError:
             pass
 
@@ -101,7 +101,6 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
                     self.connection.send(msg.encode())
 
 
-
     def hash_key(self, key):
         ha = hashlib.sha1(key.strip().encode())
         ha.update("258EAFA5-E914-47DA-95CA-C5AB0DC85B11".encode())
@@ -143,9 +142,11 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
         self.connection.send(last)
 
 
-
     def receive(self):
         recv    = self.connection.recv(1)
+        if (len(recv) == 0): # TODO implement clean socket shutdown
+            print("Websocket: received empty message.")
+            return
 
         fin      = recv[0] >> 7
         op_code  = recv[0] %  2**4
@@ -154,10 +155,10 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
             self.recv_data(fin)
         elif op_code == 8:
             self.shutdown()
-        elif op_code == 9:
-            self.recv_ping()
-        elif op_code == 10:
-            self.recv_pong()
+        #elif op_code == 9: # TODO functionality not used yet
+        #    self.recv_ping()
+        #elif op_code == 10:
+        #    self.recv_pong()
         else:
             print('WSConnection: Not supported op_code.')
 
@@ -167,15 +168,17 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
 
         recv     = self.connection.recv(1)
         mask_bit = recv[0] >> 7
-        length   = recv[0] %  2**7
+        rawlength   = recv[0] %  2**7
 
         if not mask_bit: raise ValueError('WSConnection: Message from client not masked')
-           
-        length    = self.get_length(length)
+    
+        bytelength    = self.get_bytelength(rawlength)
         mask      = self.connection.recv(4) * 256
-        remaining = length
+        remaining = bytelength
 
-        while remaining > 0:
+        #print("received: rawlength: %d, bytelength: %d" % (rawlength, bytelength) )
+
+        while remaining > 0: # TODO why magic number 1024? increase?
             read_bytes = 1024 if remaining > 1024 else remaining
             recv = self.connection.recv(read_bytes)
             data.extend(bytearray(mask[pos] ^ value for pos,value in enumerate(recv)))
@@ -184,7 +187,7 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
         self.listener(data)
 
 
-    def get_length(self, length):
+    def get_bytelength(self, length):
         if length == 126:
             recv     = self.connection.recv(2)
             length   = int.from_bytes(recv, byteorder='big')

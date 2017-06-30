@@ -66,37 +66,6 @@ class RequestHandler(BaseHTTPRequestHandler):
           </body>
         </html> """
 
-    main1_html = """
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8" />
-          </head>
-          <body>
-
-            <h1>Websocket Test</h1>
-
-            <p id="state">IDLE</p>
-
-            <script>
-              if(typeof(Worker) !== "undefined"){
-                if(typeof(w) == "undefined"){
-                  w = new Worker("webworker.js");
-                }
-                w.onmessage = function(worker_state) { 
-                  document.getElementById("state").innerHTML = worker_state.data;
-                  console.log(worker_state.data);
-                };
-
-              } else {
-		document.getElementById("state").innerHTML = "Sorry your browser doesnt support WebWorker";
-              } 
-            </script>
-
-          </body>
-        </html> """
-
-
     def do_HEAD(s):
         s.send_response(200)
         s.send_header("Content-type", "text/html")
