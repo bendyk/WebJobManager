@@ -1,5 +1,6 @@
 __pycache__/*
 server/__pycache__/*
 util/__pycache__/*
+workflows/__pycache__/*
 *.pyc
 

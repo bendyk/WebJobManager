@@ -177,7 +177,9 @@ Module['preRun']  = load_in_files;
             data.append("  console.log(\"send file: %s\");" % f_path)
             data.append("  var file = FS.readFile(\"%s\", %s);" % (f_path, read_opts))
             data.append("  ws.send('\\u0003' + \"%s\");" % f_path)
-            data.append("  ws.send(new Blob(['\\u0002', file]));")
+            data.append("  ws.send('\\u0002');")
+            data.append("  ws.send(file);")
+            #data.append("  ws.send(new Blob(['\\u0002', file], {type: \"application/octet-binary\"}));") # this strangely crashes on firefox 54, but not with other browsers
             data.append("  ws.send('\\u0008');")
         return "\n".join(data)
 

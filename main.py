@@ -17,10 +17,10 @@ from util.statistics import Statistics
 # specify which tasks have to be executed
 
 # Montage workflow
-import workflows.montagedag as pre_tasks
+#import workflows.montagedag as pre_tasks
 
 # mJob workflow
-#import workflows.mjobdag as pre_tasks
+import workflows.mjobdag as pre_tasks
 
 # plainjs example
 #import workflows.plainjs as pre_tasks
