@@ -160,7 +160,7 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
         #elif op_code == 10:
         #    self.recv_pong()
         else:
-            print('WSConnection: Not supported op_code.')
+            print('WSConnection: Not supported op_code: %d' % op_code)
 
 
     def recv_data(self, fin):
