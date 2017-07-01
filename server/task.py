@@ -112,8 +112,12 @@ Module['preRun']  = load_in_files;
         self.pre_time     = 0
         self.main_time    = 0
         self.post_time    = 0
-        self.abs_time     = 0
-        self.wait_time    = time.time()
+        self.abs_time_start = 0
+        self.abs_time_stop = 0
+        self.abs_time = 0
+        self.wait_time_start = time.time()
+        self.wait_time_stop = 0
+        self.wait_time = 0
         self.in_execution = False
 
 
@@ -139,8 +143,8 @@ Module['preRun']  = load_in_files;
     def start(self, connection):
         data              = []
         self.in_execution = True
-        self.abs_time     = time.time()
-        self.wait_time    = int(round((time.time() - self.wait_time) * 1000)) 
+        self.wait_time_stop = time.time()
+        self.wait_time = int(round((self.wait_time_stop - self.wait_time_start) * 1000)) 
 
         js_inputs  = self.__generate_js_input_files()
         js_outputs = self.__generate_js_output_files()
@@ -152,6 +156,7 @@ Module['preRun']  = load_in_files;
             self.__append_args(data)
         self.__append_exe(data)
 
+        self.abs_time_start = time.time()
         connection.send_text("\n".join(data))
 
 
@@ -217,4 +222,7 @@ Module['preRun']  = load_in_files;
     def finish(self):
         self.done         = True
         self.in_execution = False
-        self.abs_time     = int(round((time.time() - self.abs_time) * 1000))
+        self.abs_time_stop = time.time()
+        self.abs_time     = int(round((self.abs_time_stop - self.abs_time_start) * 1000))
+
+

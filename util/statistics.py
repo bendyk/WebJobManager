@@ -41,3 +41,4 @@ class Statistics:
       lines.append("".join(line))
 
       f.write("\n".join(lines))
+      f.write("\n")
