@@ -29,6 +29,7 @@ import workflows.plainjsdag as pre_tasks
 #import workflows.benchtasks as pre_tasks
 
 machines = []
+MINIMUM_MACHINES = 1
 tasks = pre_tasks.tasks
 
 
@@ -43,6 +44,18 @@ def run():
         t.setDaemon(True)
         t.start()
         print("Running HttpServer on port 8888")
+
+        if MINIMUM_MACHINES > 1:
+            print("Will wait until %d machines are connected" % MINIMUM_MACHINES)
+
+        wait_for_machines = True
+        while wait_for_machines: # wait until enough machines are connected
+            count_connected = count_machines()
+            if count_connected >= MINIMUM_MACHINES:
+                wait_for_machines = False
+                print("%d machines are ready." % count_connected)
+            else:
+                time.sleep(1)
 
         while True:
             alltasksdone = True
@@ -91,5 +104,17 @@ def execute(task):
 def on_newConnection(connection):
     machines.append(Machine(connection))
 
+def count_machines():
+    cnt = 0
+    for m in machines:
+        if (not m.is_busy()):
+            cnt += 1
+
+    return cnt
+
+
 if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        MINIMUM_MACHINES = int(sys.argv[1])
+
     run()
