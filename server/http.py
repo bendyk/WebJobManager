@@ -29,12 +29,19 @@ class RequestHandler(BaseHTTPRequestHandler):
               }
 
               function starter(){
-                var ws;
 
-                if(typeof(ws) == "undefined"){
-                  ws_address = "ws:" + document.URL.split(":").slice(1,-1).join(":") + ":9999/";
-                  console.log("Create new Websocket connection");
-                  ws = new WebSocket(ws_address);
+                var ws;
+                var ws_address;
+
+                function start(address){
+                  if(typeof(ws) == "undefined"){
+                    console.log("Create new Websocket connection");
+                    ws = new WebSocket(ws_address);
+                  }
+
+                  ws.binaryType = "arraybuffer";
+                  ws.onmessage  = recv_executable;
+                  ws.onopen     = request_executable;
                 }
 
                 function recv_executable(msg){
@@ -45,17 +52,26 @@ class RequestHandler(BaseHTTPRequestHandler):
                   ws.send(new ArrayBuffer(1));
                 }
 
-                ws.binaryType = "arraybuffer";
-                ws.onmessage  = recv_executable;
-                ws.onopen     = request_executable;
+                if(ws_address == undefined){
+                  self.onmessage = function(e){
+                                     ws_address = e.data[0];
+                                     start();    
+                                   }
+                }else{
+                  start();
+                }
+
+
               }
 
 
               var wworker;
+              var ws_address = "ws:" + window.location.href.split(":").slice(1,-1).join(":") + ":9999/"
 
               if(typeof(Worker) !== undefined){
 
                 wworker = new Worker(function_to_url(starter));
+                wworker.postMessage([ws_address]);
 
               }else{
 

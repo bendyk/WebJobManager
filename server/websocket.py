@@ -91,7 +91,7 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
     def handshake(self):
         handshaken = False
         while not handshaken:
-            header = self.connection.recv(512).decode("utf-8")
+            header = self.connection.recv(1024).decode("utf-8")
 
             for line in header.split("\n"):
                 if "WebSocket-Key" in line:
@@ -172,9 +172,9 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
 
         if not mask_bit: raise ValueError('WSConnection: Message from client not masked')
     
-        bytelength    = self.get_bytelength(rawlength)
-        mask      = self.connection.recv(4) * 256
-        remaining = bytelength
+        bytelength = self.get_bytelength(rawlength)
+        mask       = self.connection.recv(4) * 256
+        remaining  = bytelength
 
         #print("received: rawlength: %d, bytelength: %d" % (rawlength, bytelength) )
 
