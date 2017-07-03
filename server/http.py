@@ -32,8 +32,9 @@ class RequestHandler(BaseHTTPRequestHandler):
                 var ws;
 
                 if(typeof(ws) == "undefined"){
+                  ws_address = "ws:" + document.URL.split(":").slice(1,-1).join(":") + ":9999/";
                   console.log("Create new Websocket connection");
-                  ws = new WebSocket("ws://localhost:9999/");
+                  ws = new WebSocket(ws_address);
                 }
 
                 function recv_executable(msg){
