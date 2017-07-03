@@ -20,10 +20,13 @@ from util.statistics import Statistics
 #import workflows.montagedag as pre_tasks
 
 # mJob workflow
-import workflows.mjobdag as pre_tasks
+#import workflows.mjobdag as pre_tasks
 
 # plainjs example
-#import workflows.plainjs as pre_tasks
+import workflows.plainjsdag as pre_tasks
+
+# benchtasks workflows
+#import workflows.benchtasks as pre_tasks
 
 machines = []
 tasks = pre_tasks.tasks

@@ -38,4 +38,4 @@ Module['addRunDependency']    = function (id){dependencies++};
 Module['removeRunDependency'] = function (id){dependencies--};
 Module['preRun']();
 
-var prerun_interval = setInterval(check_dependencies, 100);
+var prerun_interval = setInterval(check_dependencies, 0);
