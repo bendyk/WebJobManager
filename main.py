@@ -20,10 +20,10 @@ from util.statistics import Statistics
 #import workflows.montagedag as pre_tasks
 
 # mJob workflow
-#import workflows.mjobdag as pre_tasks
+import workflows.mjobdag as pre_tasks
 
 # plainjs example
-import workflows.plainjsdag as pre_tasks
+#import workflows.plainjsdag as pre_tasks
 
 # benchtasks workflows
 #import workflows.benchtasks as pre_tasks
@@ -45,6 +45,9 @@ def run():
         t.start()
         print("Running HttpServer on port 8888")
 
+        # timestamps for workflow runtime calculation
+        workflow_start_time = 0
+
         if MINIMUM_MACHINES > 1:
             print("Will wait until %d machines are connected" % MINIMUM_MACHINES)
 
@@ -61,6 +64,8 @@ def run():
             alltasksdone = True
             for task in tasks:
                 if task.ready() and not task.done:
+                    if workflow_start_time == 0:
+                        workflow_start_time = time.time()
                     execute(task)
                 
                 if alltasksdone and not task.done:
@@ -72,7 +77,7 @@ def run():
             time.sleep(1)
         
         print("all tasks done.")
-        Statistics.save_time_stats("task_times.stats", tasks)
+        Statistics.save_time_stats("task_times.stats", tasks, workflow_start_time)
 
     except(KeyboardInterrupt, SystemExit):
         print("Main: Interrupted.")
