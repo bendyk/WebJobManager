@@ -78,9 +78,9 @@ tr:hover {
 	<h2>Assigned job</h2>
 	<p id="task_name"></p>
 
-	<h2>Job history</h2>
+	<h2>Job history [ms]</h2>
 	<table id="task_history">
-		<tr><th>Jobname</th><th>Stage-in [ms]</th><th>Execution [ms]</th><th>Stage-out [ms]</th><th>Total runtime [ms]</th></tr>
+		<tr><th>Jobname</th><th>Stage-in</th><th>Execution</th><th>Stage-out</th><th>Total runtime</th></tr>
 	</table>
 
 <script>
@@ -99,6 +99,8 @@ var TXT_EXEC_FINISHED = "Finished";
 
 var TXT_NO_JOB = "Not assigned";
 
+var jobHistory; // stores past job execution times
+
 function setConnectionState(text) {
 	document.getElementById("connection_state").innerText = text;
 }
@@ -109,7 +111,7 @@ function setJobAssignment(text) {
 	document.getElementById("task_name").innerText = text;
 }
 
-function storeJobInHistory(jobname, dur1, dur2, dur3, total) {
+function showJobInHistory(jobname, dur1, dur2, dur3, total) {
 	var htmltr = "<tr><td>"+ jobname +"</td><td>"+ dur1 +"</td><td>"+ dur2 +"</td><td>"+ dur3 +"</td><td>"+ total +"</td></tr>";
 	var row = document.getElementById("task_history").insertRow(1);
 	row.insertCell(0).innerText = jobname;
@@ -117,46 +119,46 @@ function storeJobInHistory(jobname, dur1, dur2, dur3, total) {
 	row.insertCell(2).innerText = dur2;
 	row.insertCell(3).innerText = dur3;
 	row.insertCell(4).innerText = total;
+}
 
-//	document.getElementById("task_history").tBodies[0].innerHTML += htmltr;
-	
-	// TODO store persistently (ID is Datetime)
+function storeJobInHistory(jobname, dur1, dur2, dur3, total) {
+	showJobInHistory(jobname, dur1, dur2, dur3, total);
+
+	// store persistently
+	jobHistory.push({"name": jobname, "dur1": dur1, "dur2": dur2, "dur3": dur3, "total": total});
+	saveHistory();
 }
 
 
 // local storage functionality
-/*
 function testStorageAvailability() {
 	return (typeof(Storage) !== "undefined");
 }
 
 function getState() {
-	var data = JSON.parse(localStorage.getItem("testdata"));
-	return data;
+	return JSON.parse(localStorage.getItem("history"));
 }
 
-function saveState(data) {
-	localStorage.setItem("testdata", JSON.stringify(data));
+function saveHistory() {
+	localStorage.setItem("history", JSON.stringify(jobHistory));
 }
 
-function autorun() {
+function loadHistory() {
 	// test for storage availablity
 	if (!testStorageAvailability()) {
-		document.getElementById("support").innerText = "disabled";
+		console.log("Persistent storage for job history is not supported by browser.");
 		return;
 	}
-	document.getElementById("support").innerText = "enabled";
 
-	var data = getState();
-	if (data == null) {
-		data = 1;
+	jobHistory = getState();
+	if (jobHistory == null) {
+		jobHistory = []; // initialize empty array
 	}
-	document.getElementById("dataeg").innerText = data;
-
-	++data;
-
-	saveState(data);
-}*/
+	
+	// fill table with loaded entries
+	for (var i in jobHistory)
+		showJobInHistory(jobHistory[i]["name"], jobHistory[i]["dur1"], jobHistory[i]["dur2"], jobHistory[i]["dur3"], jobHistory[i]["total"]);
+}
 
 
 /** Helper to call a function by a webworker instance. */
@@ -245,7 +247,7 @@ function init() {
 	setConnectionState(TXT_NOT_CONNECTED);
 	setExecutionState(TXT_EXEC_IDLE);
 	setJobAssignment(TXT_NO_JOB);
-	storeJobInHistory("example/this/and/that/and_other", "1234 ms", "1234 ms", "1234 ms", "3702 ms");
+    loadHistory();
 
 	// start the webworker or run directly, if not available
 	if (typeof(Worker) !== "undefined") {
@@ -273,79 +275,6 @@ else
   </body>
 </html> 
     """
-    main_html_old = """
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8" />
-          </head>
-          <body>
-
-            <h1>Websocket Test</h1>
-
-            <p id="state">IDLE</p>
-
-            <script>
-              function function_to_url(js_function){
-                var blob = new Blob(['('+ js_function.toString() + ')()'], {type: 'application/javascript'});
-                return URL.createObjectURL(blob);
-              }
-
-              function starter(){
-
-                var ws;
-                var ws_address;
-
-                function start(address){
-                  if(typeof(ws) == "undefined"){
-                    console.log("Create new Websocket connection");
-                    ws = new WebSocket(ws_address);
-                  }
-
-                  ws.binaryType = "arraybuffer";
-                  ws.onmessage  = recv_executable;
-                  ws.onopen     = request_executable;
-                }
-
-                function recv_executable(msg){
-                  eval(msg.data);
-                }
-
-                function request_executable(){
-                  ws.send(new ArrayBuffer(1));
-                }
-
-                if(ws_address == undefined){
-                  self.onmessage = function(e){
-                                     ws_address = e.data[0];
-                                     start();    
-                                   }
-                }else{
-                  start();
-                }
-
-
-              }
-
-
-              var wworker;
-              var ws_address = "ws:" + window.location.href.split(":").slice(1,-1).join(":") + ":9999/"
-
-              if(typeof(Worker) !== undefined){
-
-                wworker = new Worker(function_to_url(starter));
-                wworker.postMessage([ws_address]);
-
-              }else{
-
-                starter(); 
-              }
-
-            </script>
-
-          </body>
-        </html> 
-"""
 
     def do_HEAD(s):
         s.send_response(200)
