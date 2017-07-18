@@ -241,7 +241,7 @@ function init() {
 		wworker = new Worker(function_to_url(establishConnection));
 		wworker.addEventListener("message", function(e) {
 			var functionCallAsString = e.data["cmd"] + "(" + e.data["arg"] + ")";
-			console.log("call: ", functionCallAsString);
+			//console.log("call: ", functionCallAsString);
 			eval(functionCallAsString);
 		}, false);
 		wworker.postMessage([ws_address]);

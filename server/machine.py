@@ -102,4 +102,5 @@ class Machine:
             
             else: 
                 print("%s: UNKNOWN data received." % self.connection.address[0])
+                #print("%s: UNKNOWN data received: %s" % (self.connection.address[0], payload.decode()))
 
