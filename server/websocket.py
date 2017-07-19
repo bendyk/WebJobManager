@@ -143,8 +143,13 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
 
 
     def receive(self):
-        recv    = self.connection.recv(1)
-        if (len(recv) == 0): # TODO implement clean socket shutdown
+        try:
+            recv = self.connection.recv(1)
+        except:
+            pass
+            return
+
+        if (len(recv) == 0):
             print("Websocket: received empty message.")
             return
 
