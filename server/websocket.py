@@ -155,7 +155,7 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
             self.recv_data(fin)
         elif op_code == 8:
             self.shutdown()
-        #elif op_code == 9: # TODO functionality not used yet
+        #elif op_code == 9: # functionality not used yet
         #    self.recv_ping()
         #elif op_code == 10:
         #    self.recv_pong()
@@ -168,7 +168,7 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
 
         recv     = self.connection.recv(1)
         mask_bit = recv[0] >> 7
-        rawlength   = recv[0] %  2**7
+        rawlength   = recv[0] % 2**7
 
         if not mask_bit: raise ValueError('WSConnection: Message from client not masked')
     
@@ -178,8 +178,8 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
 
         #print("received: rawlength: %d, bytelength: %d" % (rawlength, bytelength) )
 
-        while remaining > 0: # TODO why magic number 1024? increase?
-            read_bytes = 1024 if remaining > 1024 else remaining
+        while remaining > 0:
+            read_bytes = 1024 if remaining > 1024 else remaining 
             recv = self.connection.recv(read_bytes)
             data.extend(bytearray(mask[pos] ^ value for pos,value in enumerate(recv)))
             remaining -= len(recv)

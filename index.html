@@ -49,6 +49,21 @@ th, td {
 tr:hover {
 	background-color: #f5f5f5;
 }
+
+.button {
+	background-color: #6366F4;
+	color: white;
+	text-align: center;
+	font-size: 12px;
+	padding: 4px 12px;
+	border-radius: 8px;
+	cursor: pointer;
+	line-height: 10px;
+}
+.button:hover {
+	background-color: #60AAFF;
+	color: black;
+}
 	</style>
 </head>
 <body>
@@ -65,7 +80,7 @@ tr:hover {
 	<h2>Assigned job</h2>
 	<p id="task_name"></p>
 
-	<h2>Job history [ms]</h2>
+	<h2>Job history [ms] <span class="button" id="clear_history">Clear</span></h2>
 	<table id="task_history">
 		<tr><th>Jobname</th><th>Stage-in</th><th>Execution</th><th>Stage-out</th><th>Total runtime</th></tr>
 	</table>
@@ -99,7 +114,6 @@ function setJobAssignment(text) {
 }
 
 function showJobInHistory(jobname, dur1, dur2, dur3, total) {
-	var htmltr = "<tr><td>"+ jobname +"</td><td>"+ dur1 +"</td><td>"+ dur2 +"</td><td>"+ dur3 +"</td><td>"+ total +"</td></tr>";
 	var row = document.getElementById("task_history").insertRow(1);
 	row.insertCell(0).innerText = jobname;
 	row.insertCell(1).innerText = dur1;
@@ -116,8 +130,18 @@ function storeJobInHistory(jobname, dur1, dur2, dur3, total) {
 	saveHistory();
 }
 
+function clearJobHistory() {
+	console.log("#jobs: ", jobHistory.length);
+	var jobsCnt = jobHistory.length;
+	for (var i=0; i < jobsCnt; ++i) {
+		jobHistory.pop();
+		document.getElementById("task_history").deleteRow(1);
+		console.log("#jobs: ", jobHistory.length);
+	}
+	console.log("#jobs: ", jobHistory.length);
+	saveHistory();
+}
 
-// local storage functionality
 function testStorageAvailability() {
 	return (typeof(Storage) !== "undefined");
 }
@@ -145,6 +169,9 @@ function loadHistory() {
 	// fill table with loaded entries
 	for (var i in jobHistory)
 		showJobInHistory(jobHistory[i]["name"], jobHistory[i]["dur1"], jobHistory[i]["dur2"], jobHistory[i]["dur3"], jobHistory[i]["total"]);
+
+	// for emptying the job history
+	document.getElementById("clear_history").addEventListener("click", clearJobHistory, false);
 }
 
 
