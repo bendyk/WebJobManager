@@ -108,6 +108,9 @@ int main(int argc, char **argv) {
 
   // write result
   std::string outpath(inp1);
+  size_t last_sep = outpath.find_last_of('/') + 1;
+  outpath         = std::string(outpath.begin() + last_sep, outpath.end());
+
   size_t lim = outpath.find_last_of('.');
   if (lim != std::string::npos && outpath.size() >= (lim + 4)) { // assume outpath is: *.srt+
     outpath[lim+1] = 'm';
