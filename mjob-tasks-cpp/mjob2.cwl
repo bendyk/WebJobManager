@@ -6,7 +6,7 @@ inputs:
     type: File
     inputBinding:
       position: 1
-  fout : string
+  fout: string
 outputs:
   fileout:
     type: File

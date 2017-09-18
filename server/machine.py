@@ -1,5 +1,6 @@
 import os
 import time
+from .sheduler import Sheduler
 
 
 class Machine:

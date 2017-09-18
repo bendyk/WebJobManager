@@ -10,7 +10,6 @@ inputs:
     type: File
     inputBinding:
       position: 2
-      valueFrom: $(inputs.file1)
 outputs:
   fileout:
     type: File

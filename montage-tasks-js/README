@@ -1,3 +1,5 @@
+############ CHANGES FOR COMPILING MONTAGE TOOLS TO JS FILES ########################
+
 export CC=emcc
 
 

@@ -279,13 +279,10 @@ class WorkflowStep:
 
     for inp in self.inputs.values():
       if hasattr(inp, 'position'):
-        print("-----------step:%s position:%d value:%s" % (self.identifier, inp.position, inp.value))
         if len(self.inputs) > inp.position > -1:
           tmp_args[inp.position] = [inp.prefix, inp.value]
         else:
           tmp_args.append([inp.prefix, inp.value])
-        print("-------args")
-        print(tmp_args)
 
     for arg in tmp_args:
       args.extend(arg)
