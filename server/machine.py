@@ -1,4 +1,6 @@
+import os
 import time
+
 
 class Machine:
 
@@ -11,6 +13,7 @@ class Machine:
     MAIN_TIME   = 6
     POST_TIME   = 7
     OUTPUT_FILE_END = 8
+    OUTPUT_KEEP = 9
 
 
     def __init__(self, connection):
@@ -52,10 +55,19 @@ class Machine:
 
     def recv_file(self, data, openmode):
         #print("try to write to %s" % self.output_path)
+
+        if ("/" in self.output_path) and not os.path.exists(self.output_path.rsplit("/",1)[0]):
+            os.makedirs(self.output_path.rsplit("/",1)[0])
+
         with open(self.output_path, openmode) as f:
             f.write(data)
 
 
+    def check_file_transfer(self):
+        keep_file = "SEND FILE" if Sheduler.check_file_transfer(self.task, self.output_path) else "KEEP FILE"
+        self.connection.send_text(keep_file)
+       
+          
     def conn_listener(self, data):
 
         if (self.receiving_file): # append data to file or detect end of file
@@ -74,7 +86,7 @@ class Machine:
 
             elif cmd == self.INPUT_FILE:
                 #print("%s: command input file: %s" % (self.connection.address[0], payload.decode()))
-                self.send_file(payload.decode())
+                self.send_file(self.task.wf_path + "/" + payload.decode())
 
             elif cmd == self.OUTPUT_FILE:
                 #print("%s: command output file: %s" % (self.connection.address[0], payload[0:10]))
@@ -83,7 +95,8 @@ class Machine:
 
             elif cmd == self.OUTPUT_PATH:
                 #print("%s: command output path: %s" % (self.connection.address[0], payload.decode()))
-                self.output_path = payload.decode()
+                self.output_path = self.task.path + "/" + payload.decode()
+                self.check_file_transfer()
 
             elif cmd == self.CLIENT_MSG:
                 print("%s: client msg %s received" % (self.connection.address[0], payload.decode()))

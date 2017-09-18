@@ -21,7 +21,8 @@ function request_input_file(f_name){
 }
 
 function recv_input_file(msg){
-    FS.writeFile(cur_request["file"], new Uint8Array(msg.data), {encoding:'binary'});
+    path = cur_request["file"].slice(cur_request["file"].indexOf("/")+1);
+    FS.writeFile(path, new Uint8Array(msg.data), {encoding:'binary'});
 
     if(request_queue.length == 0) {
         all_in_files_loaded();

@@ -3,22 +3,24 @@ import glob
 
 class Task:
 
-    def __init__(self, executable, args=None):
+    def __init__(self, executable, args=None, wf_path="./", identifier=""):
         self.args         = args
+        self.path         = wf_path + "/" + identifier
+        self.wf_path      = wf_path
         self.in_files     = []
         self.out_files    = []
         self.done         = False
-        self.executable   = executable
+        self.executable   = wf_path + "/" + executable
         self.dependencies = []
         self.pre_time     = 0
         self.main_time    = 0
         self.post_time    = 0
+        self.abs_time     = 0
         self.abs_time_start = 0
-        self.abs_time_stop = 0
-        self.abs_time = 0
+        self.abs_time_stop  = 0
         self.wait_time_start = time.time()
-        self.wait_time_stop = 0
-        self.wait_time = 0
+        self.wait_time_stop  = 0
+        self.wait_time       = 0
         self.in_execution = False
 
 
@@ -49,18 +51,12 @@ class Task:
 
         js_inputs  = self.__generate_js_input_files()
         js_outputs = self.__generate_js_output_files()
-        #print("generated inputs: %s" % js_inputs)
-        #print("generated outputs: %s" % js_outputs)
         with open("tasks.js", "r") as f:
             data.append(f.read() % {"inputs": js_inputs, "outputs": js_outputs})
-        #data.append(ESSENTIALS % {"inputs": js_inputs, "outputs": js_outputs})
 
         if self.args:
             self.__append_args(data)
         self.__append_exe(data)
-
-        #with open("tmp_sendtask.js", "w") as fout:
-        #    fout.write("\n".join(data))
 
         self.abs_time_start = time.time()
         connection.send_text("\n".join(data))
@@ -68,12 +64,22 @@ class Task:
 
     def __generate_js_input_files(self):
         data = []
+        if self.path:
+            data.append("  FS.createPath(\"/\", \"%s\");" % self.path.rsplit("/", 1)[0])
+            data.append("  FS.createLink(\"%s\", \"%s\", \"/\");" % (self.path.rsplit("/", 1)[0], self.path.rsplit("/",1)[1]))
+        data.append("console.log('%s');" % self.path.rsplit("/", 1)[0])
+        data.append("console.log('%s');" % self.path)
+        data.append("console.log(FS.readdir(\"/\"));")
+        data.append("console.log(FS.readdir(\"%s\"));" % self.path)
 
         for f_path in self.in_files:
             #for f_name in glob.glob(f_path): # this does not work, as some of these files do not exist, yet!
             data.append("  dependency_id = getUniqueRunDependency(1);")
             data.append("  Module['addRunDependency'](dependency_id);") 
             data.append("  request_queue.push({\"dep_id\": dependency_id, \"file\": \"%s\"});" % f_path)
+            data.append("  console.log(\"request file:%s\");" % f_path)
+            if "/" in f_path:
+              data.append("  if(!FS.analyzePath(\"%s\").exists){FS.createPath(\"/\", \"%s\");}" % (f_path.rsplit("/",1)[0], f_path.rsplit("/",1)[0]))
 
         return "\n".join(data)
       
@@ -84,6 +90,7 @@ class Task:
      
         for f_path in self.out_files:
             #for f_name in glob.glob(f_path): # this does not work, as these files do not exist, yet!
+            data.append("console.log(FS.readdir(\"/\"));")
             data.append("  console.log(\"send file: %s\");" % f_path)
             data.append("  var file = FS.readFile(\"%s\", %s);" % (f_path, read_opts))
             data.append("  ws.send('\\u0003' + \"%s\");" % f_path)
@@ -97,9 +104,10 @@ class Task:
     def __append_args(self, data):
         argc = 0
         for arg in self.args:
-            argc += 1
-            data.append("arguments['%d'] = \"%s\";" % (argc-1, arg))
-            #print("Argument: " + arg)
+            if arg:
+                argc += 1
+                data.append("arguments['%d'] = \"%s\";" % (argc-1, arg))
+                data.append("console.log(\"%s\");" % arg)
         data.append("arguments.length = %d;" % argc)
 
 

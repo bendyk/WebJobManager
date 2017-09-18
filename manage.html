@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<noscript>
+  <h2>
+    Error: You cannot use WebFlowWorker if JavaScript is deactivated. Please enable JavaScript.
+  </h2>
+</noscript>
+
+
+<form action="" enctype="multipart/form-data" method="POST">
+  <p>Workflow file</p>
+  <ul>
+    <li>
+      <input id="wf_file" name="workflow.cwl" type="file">
+    </li>
+  </ul>
+
+  <p>Data file</p>
+  <ul>
+    <li>
+      <input id="wf_data" name="workflow.json" type="file">
+    </li>
+  </ul>
+
+  <p>CWL files</p>
+  <ul style="list-style-type:none">
+    <li>
+      <input id="cwl" name="cwl-0" type="file">
+    </li>
+  </ul>
+
+  <p>Javascript files</p>
+  <ul style="list-style-type:none">
+    <li>
+      <input id="jss" name="jss-0" type="file">
+    </li>
+  </ul>
+
+  <p>Input files</p>
+  <ul style="list-style-type:none">
+    <li>
+      <input id="inputs" name="inputs-0" type="file">
+    </li>
+  </ul>
+
+  <div>
+    <input type="submit" name="submit" value="Send Workflow">
+  </div>
+</form>
+
+<script>
+
+   function addFileInput(e){
+     var old_input = e.srcElement || e.originalTarget;
+     var new_input = document.createElement("input");
+     var list_item = document.createElement("li");
+     var new_name  = old_input.name.split("-")[0] + "-" + (parseInt(old_input.name.split("-")[1]) + 1);
+
+
+     new_input.type = "file";
+     new_input.name = new_name;
+     new_input.addEventListener("change", addFileInput, false);
+     old_input.removeEventListener("change", addFileInput, false);
+
+     list_item.appendChild(new_input);
+
+     old_input.parentElement.parentElement.appendChild(list_item);
+   }
+
+   document.getElementById("cwl").addEventListener("change", addFileInput, false);
+   document.getElementById("jss").addEventListener("change", addFileInput, false);
+   document.getElementById("inputs").addEventListener("change", addFileInput, false);
+
+</script>

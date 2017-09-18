@@ -1,0 +1,18 @@
+cwlVersion: v1.0
+class: CommandLineTool
+baseCommand: mjob4.js
+inputs:
+  file1:
+    type: File
+    inputBinding:
+      position: 1
+  file2:
+    type: File
+    inputBinding:
+      position: 2
+      valueFrom: $(inputs.file1)
+outputs:
+  fileout:
+    type: File
+    outputBinding:
+      glob: foo.mrge

@@ -14,7 +14,7 @@ body {
 	padding: 0 10px;
 }
 
-h1, h2 {
+h1, h2, h3 {
 	font-family: "Segoe UI", Arial, sans-serif;
 	line-height: 1.2;
 	border-radius: 4px;
@@ -25,10 +25,13 @@ h1 {
 	font-size: 36px;
 	text-align: center;
 }
-h2 {
+h2, h3 {
 	background-color: #AFDDE9;
 	font-size: 24px;
 	padding: 8px 20px;
+}
+h3 {
+        text-align: center;
 }
 p {
 	margin: 18px 32px;
@@ -67,9 +70,16 @@ tr:hover {
 	</style>
 </head>
 <body>
-	<h1>WebFlowWorker</h1>
-
+        <h1>WebFlowWorker</h1>
+         
 	<noscript><h2>Error: You cannot use WebFlowWorker if JavaScript is deactivated. Please enable JavaScript.</h2></noscript>
+
+        <h3 style="text-align: center">
+          <form action="manage.html" method="GET">
+            <button class="button" type="submit"> Add a Workflow </button>
+            <br>
+          </form>
+        </h3>
 
 	<h2>Connection state</h2>
 	<p id="connection_state"></p>

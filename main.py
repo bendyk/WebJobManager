@@ -6,11 +6,14 @@ import threading
 import hashlib
 import base64
 import binascii
+from optparse import OptionParser
 from http.server import HTTPServer
 from server.websocket import WSServer, WSConnection
 from server.http import RequestHandler
 from server.machine import Machine
 from server.task import Task
+from server.workflow import Workflow
+from server.sheduler import Sheduler
 
 from util.statistics import Statistics
 
@@ -28,98 +31,85 @@ import workflows.mjobdag as pre_tasks
 # benchtasks workflows
 #import workflows.benchtasks as pre_tasks
 
-machines = []
-MINIMUM_MACHINES = 1
 tasks = pre_tasks.tasks
+#Sheduler.addWorkflow(Workflow("").set_tasks(tasks))
+
+def parse_args():
+
+    parser = OptionParser(usage="%prog [-p workflow_dir -w cwl_workflow_file [-d cwl_data_file]]")
+
+    parser.add_option("-p", "--path", dest="wf_path", action="store",
+                      type="string", default="", 
+                      help="root path of the workflow. all filepaths have to be relative to this path")
+
+    parser.add_option("-w", "--workflow", dest="wf_file", action="store", 
+                      type="string", default="", 
+                      help="absolute path to the cwl_workflow file")
+ 
+    parser.add_option("-d", "--data", dest="data_file", action="store", 
+                      type="string", default="", 
+                      help="absolute path to an optional datafile for the workflow")
+
+    parser.add_option("--http-port", dest="http_port", action="store",
+                      type="int", default = 8888, 
+                      help="Http port for the webinterface")
+
+    parser.add_option("--ws-port", dest="ws_port", action="store",
+                      type="int", default = 9999, 
+                      help="Websocket port for data transfer")
+
+    parser.add_option("-m", "--min-machines", dest="minimum_machines", action="store",
+                      type="int", default = 1, 
+                      help="Minimum of machines to start workflow")
+
+    (options, args) = parser.parse_args()
+
+    if options.wf_file:
+        if not options.wf_path:
+            print("workflow directory required (-p WorkflowPath)")
+            exit(-1)
+
+    return options
 
 
-def run():
+def run(opts):
+    Sheduler.MINIMUM_MACHINES = opts.minimum_machines
+
+    if opts.wf_file:
+        Sheduler.addWorkflow(Workflow(opts.wf_path, opts.wf_file, opts.data_file))
 
     try:
-        wsd = WSServer(("", 9999), on_newConnection)
+        wsd = WSServer(("", opts.ws_port), on_newConnection)
         wsd.start()
-        httpd = HTTPServer(("", 8888), RequestHandler)
+        httpd = HTTPServer(("", opts.http_port), RequestHandler)
         httpd.allow_reuse_address = True
         t = threading.Thread(target=httpd.serve_forever)
         t.setDaemon(True)
         t.start()
         print("Running HttpServer on port 8888")
 
-        # timestamps for workflow runtime calculation
-        workflow_start_time = 0
-
-        if MINIMUM_MACHINES > 1:
-            print("Will wait until %d machines are connected" % MINIMUM_MACHINES)
-
-        wait_for_machines = True
-        while wait_for_machines: # wait until enough machines are connected
-            count_connected = count_machines()
-            if count_connected >= MINIMUM_MACHINES:
-                wait_for_machines = False
-                print("%d machines are ready." % count_connected)
-            else:
-                time.sleep(1)
-
-        while True:
-            alltasksdone = True
-            for task in tasks:
-                if task.ready() and not task.done:
-                    if workflow_start_time == 0:
-                        workflow_start_time = time.time()
-                    execute(task)
-                
-                if alltasksdone and not task.done:
-                    alltasksdone = False
-
-            if alltasksdone:
-                break
-
-            time.sleep(1)
-        
-        print("all tasks done.")
-        Statistics.save_time_stats("task_times.stats", tasks, workflow_start_time)
+        Sheduler.run()
 
     except(KeyboardInterrupt, SystemExit):
         print("Main: Interrupted.")
 
-    except Exception as e:
-        print("Main: Unknown exception %s occured" % type(e))
-        print(e)
+#    except Exception as e:
+#        print("Main: Unknown exception %s occured" % type(e))
+#        print(e)
 
-    finally:
-        print()
-        print("shutdown HttpServer")
-        httpd.shutdown()
-        print("shutdown WebSocketServer") 
-        wsd.shutdown()
-        exit()
+#    finally:
+#        print()
+#        print("shutdown HttpServer")
+#        httpd.shutdown()
+#        print("shutdown WebSocketServer") 
+#        wsd.shutdown()
+#        exit()
 
-def execute(task):
-    started = False
-    while not started:
-        for machine in machines:
-            if not machine.is_busy():
-                machine.run_task(task)
-                started = True
-                break
-
-        time.sleep(1)
 
 
 def on_newConnection(connection):
-    machines.append(Machine(connection))
-
-def count_machines():
-    cnt = 0
-    for m in machines:
-        if (not m.is_busy()):
-            cnt += 1
-
-    return cnt
+    Sheduler.addMachine(Machine(connection))
 
 
-if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        MINIMUM_MACHINES = int(sys.argv[1])
-
-    run()
+if __name__ == "__main__": 
+    run(parse_args())
