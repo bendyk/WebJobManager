@@ -15,10 +15,12 @@ class Machine:
     POST_TIME   = 7
     OUTPUT_FILE_END = 8
     OUTPUT_KEEP = 9
+    OUTPUT_SEND = 10
 
 
     def __init__(self, connection):
         connection.set_listener(self.conn_listener)
+        connection.set_onClose(self.connection_closed)
         self.connection = connection
         self.__busy      = True
         self.task        = None
@@ -32,26 +34,33 @@ class Machine:
         self.task       = task
         self.__busy     = True
         self.task.start(self.connection)
-        print("%s: Task %s assigned" % (self.connection.address[0], task.executable))
+        print("%s:%d: Task %s assigned" % (self.connection.address + (task.executable,)))
 
 
     def is_busy(self):
         return self.__busy
 
+    def connection_closed(self):
+        if self.task:
+            self.task.in_execution = False
+            self.task.done         = False
+            self.task              = None
+        Sheduler.removeMachine(self)
 
     def set_ready(self):
         self.abs_time = time.time() - self.abs_time
         if self.task: 
             self.task.finish()
         self.__busy = False
-        print("%s: waiting for executable" % self.connection.address[0])
+        self.task   = None
+        print("%s:%d: waiting for executable" % self.connection.address)
         
 
 
     def send_file(self, f_name):
         with open(f_name, "rb") as f:
             self.connection.send_binary(f.read())
-        print("%s: input file %s send" % (self.connection.address[0], f_name))
+        print("%s:%d: input file %s send" % (self.connection.address + (f_name,)))
 
 
     def recv_file(self, data, openmode):
@@ -65,15 +74,39 @@ class Machine:
 
 
     def check_file_transfer(self):
-        keep_file = "SEND FILE" if Sheduler.check_file_transfer(self.task, self.output_path) else "KEEP FILE"
-        self.connection.send_text(keep_file)
+        transfer_file = Sheduler.check_file_transfer(self.task, self.output_path) 
+
+        response = self.OUTPUT_SEND if transfer_file else self.OUTPUT_KEEP
+            
+        self.connection.send_binary(response.to_bytes(1, byteorder='big'))
        
-          
+
+    def clean_workflow_files(self, wf_path):
+        ##Cleaning indexeddb files 
+        self.__busy = True
+        execution = """
+        console.log("cleanup workflow files(TODO)");
+        /*FS.mkdir("/storage");
+        FS.synfs(true,function(err){
+          if(FS.analyzePath("/storage/%(wf)s").exists){
+            FS.rmdir("/storage/%(wf)s");
+            FS.syncfs(false, function(err){
+              console.log("done");
+              ws.onmessage = recv_executable;
+              request_executable();
+            });
+          }            
+        });*/
+        """
+        print("cleaning %s on %s:%d" % ((wf_path,) + self.connection.address))
+        self.connection.send_text(execution % {"wf":wf_path})         
+
+ 
     def conn_listener(self, data):
 
         if (self.receiving_file): # append data to file or detect end of file
             if (len(data) == 1 and data[0] == self.OUTPUT_FILE_END):
-                print("%s: output file %s received" % (self.connection.address[0], self.output_path))
+                print("%s:%d: output file %s received" % (self.connection.address + (self.output_path,)))
                 self.receiving_file = False
             else:
                 self.recv_file(data, "ab") # append subsequent data of received file
@@ -96,11 +129,13 @@ class Machine:
 
             elif cmd == self.OUTPUT_PATH:
                 #print("%s: command output path: %s" % (self.connection.address[0], payload.decode()))
-                self.output_path = self.task.path + "/" + payload.decode()
+                path, size       = payload.decode().split(":")
+                self.output_path = self.task.path + "/" + path
+                self.output_size = size 
                 self.check_file_transfer()
 
             elif cmd == self.CLIENT_MSG:
-                print("%s: client msg %s received" % (self.connection.address[0], payload.decode()))
+                print("%s:%d: client msg %s received" % (self.connection.address + (payload.decode(),)))
 
             elif cmd == self.PRE_TIME:
                 self.task.set_pre_time(int(payload.decode()))
@@ -115,6 +150,6 @@ class Machine:
                 #print("%s: POSTRUN time: %sms" %(self.connection.address[0], payload.decode()))
             
             else: 
-                print("%s: UNKNOWN data received." % self.connection.address[0])
+                print("%s:%d: UNKNOWN command (%d)  received." % (self.connection.address + (cmd,)))
                 #print("%s: UNKNOWN data received: %s" % (self.connection.address[0], payload.decode()))
 

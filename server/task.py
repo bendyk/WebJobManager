@@ -4,6 +4,7 @@ import glob
 class Task:
 
     def __init__(self, executable, args=None, wf_path="./", identifier=""):
+        self.identifier   = identifier
         self.args         = args
         self.path         = wf_path + "/" + identifier
         self.wf_path      = wf_path
@@ -64,20 +65,17 @@ class Task:
 
     def __generate_js_input_files(self):
         data = []
-        if self.path:
-            data.append("  FS.createPath(\"/\", \"%s\");" % self.path.rsplit("/", 1)[0])
-            data.append("  FS.createLink(\"%s\", \"%s\", \"/\");" % (self.path.rsplit("/", 1)[0], self.path.rsplit("/",1)[1]))
-        data.append("console.log('%s');" % self.path.rsplit("/", 1)[0])
-        data.append("console.log('%s');" % self.path)
-        data.append("console.log(FS.readdir(\"/\"));")
-        data.append("console.log(FS.readdir(\"%s\"));" % self.path)
+        data.append("  wf_path = \"%s\";" % self.wf_path)
+        data.append("  task_id = \"%s\";" % self.identifier)
+        data.append("  FS.createPath(\"/\", wf_path);")
+        data.append("  FS.createLink(wf_path, task_id, \"/\");")
+        data.append("  console.log(wf_path);")
 
         for f_path in self.in_files:
             #for f_name in glob.glob(f_path): # this does not work, as some of these files do not exist, yet!
             data.append("  dependency_id = getUniqueRunDependency(1);")
             data.append("  Module['addRunDependency'](dependency_id);") 
             data.append("  request_queue.push({\"dep_id\": dependency_id, \"file\": \"%s\"});" % f_path)
-            data.append("  console.log(\"request file:%s\");" % f_path)
             if "/" in f_path:
               data.append("  if(!FS.analyzePath(\"%s\").exists){FS.createPath(\"/\", \"%s\");}" % (f_path.rsplit("/",1)[0], f_path.rsplit("/",1)[0]))
 
@@ -86,23 +84,26 @@ class Task:
 
     def __generate_js_output_files(self):
         data      = []
-        read_opts = "{encoding:'binary', flags:'r'}"
      
+        data.append("  console.log(FS.readdir(\"/\"));")
+        data.append("  console.log(\"STDOUT:\");");
+        data.append("  console.log(std_out);");
+        data.append("  console.log(\"STDERR:\");");
+        data.append("  console.log(std_err);");
+        data.append("  FS.writeFile(\"/std.out\", std_out, {encoding:'utf8'});");
+        data.append("  FS.writeFile(\"/std.err\", std_err, {encoding:'utf8'});");
+        data.append("  upload_queue.push({\"file\":\"./std.out\"});");
+        data.append("  upload_queue.push({\"file\":\"./std.err\"});");
+
         for f_path in self.out_files:
-            #for f_name in glob.glob(f_path): # this does not work, as these files do not exist, yet!
-            data.append("console.log(FS.readdir(\"/\"));")
-            data.append("  console.log(\"send file: %s\");" % f_path)
-            data.append("  var file = FS.readFile(\"%s\", %s);" % (f_path, read_opts))
-            data.append("  ws.send('\\u0003' + \"%s\");" % f_path)
-            data.append("  ws.send('\\u0002');")
-            data.append("  ws.send(file);")
-            #data.append("  ws.send(new Blob(['\\u0002', file], {type: \"application/octet-binary\"}));") # this strangely crashes on firefox 54, but not with other browsers
-            data.append("  ws.send('\\u0008');")
+          data.append("  upload_queue.push({\"file\": \"%s\"});" % f_path)
+
         return "\n".join(data)
 
 
     def __append_args(self, data):
         argc = 0
+        data.append("console.log(\"\\nARGUMENTS...\");")
         for arg in self.args:
             if arg:
                 argc += 1

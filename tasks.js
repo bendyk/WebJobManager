@@ -1,6 +1,11 @@
 var Module        = {};
 var cur_request   = {};
 var request_queue = [];
+var upload_queue  = [];
+var wf_path       = "";
+var task_id       = "";
+var std_out       = "#STDOUT\n";
+var std_err       = "#STDERR\n";
 
 // timestamps:
 var ts_prerun_start = 0;
@@ -15,29 +20,40 @@ var duration_mainrun = 0;
 var duration_postrun = 0;
 
 
-function request_input_file(f_name){  
-//console.log("load file: " + f_name);
-  ws.send('\u0001' + f_name);
+function request_input_file(){ 
+    cur_request = request_queue.shift();
+  
+    if(request_queue.length == 0){
+      all_in_files_loaded();
+    }
+    else {
+      storage_file_path = "/storage/" + wf_path + "/" + cur_request["file"];
+
+      if(FS.analyzePath(storage_file_path).exists){
+        console.log("Load file: " + cur_request["file"]);
+        var msg = {};
+        msg.data = FS.readFile(storage_file_path, {encoding:'binary', flags:'r'});
+        recv_input_file(msg);  
+      }
+      else{
+        console.log("request file: " + cur_request["file"]);
+        ws.onmessage = recv_input_file;
+        ws.send('\u0001' + cur_request['file']);
+      }
+    }
 }
 
 function recv_input_file(msg){
     path = cur_request["file"].slice(cur_request["file"].indexOf("/")+1);
     FS.writeFile(path, new Uint8Array(msg.data), {encoding:'binary'});
-
-    if(request_queue.length == 0) {
-        all_in_files_loaded();
-        Module['removeRunDependency'](cur_request["dep_id"]);
-    }
-    else {
-        Module['removeRunDependency'](cur_request["dep_id"]);
-        cur_request = request_queue.shift();
-        request_input_file(cur_request["file"]);
-    }
+    Module['removeRunDependency'](cur_request["dep_id"]);
+    request_input_file();
 }
+
 
 function all_in_files_loaded() {
     ts_prerun_stop  = Date.now();
-    
+    console.log(FS.readdir("/"));
     // inform about starting job execution
     if (typeof(setExecutionState) == "undefined")
 		self.postMessage({"cmd": "setExecutionState", "arg": "TXT_EXEC_RUN"});
@@ -49,15 +65,17 @@ function all_in_files_loaded() {
 	else
 		setJobAssignment(Module["thisProgram"]);
 
-    console.log("RUNNING ... " + Module['thisProgram']);
+    console.log("\nRUNNING... \n" + Module['thisProgram']);
 
     ws.onmessage = function(msg) {};
     
     ts_mainrun_start = Date.now();
+    Module['removeRunDependency'](cur_request["dep_id"]);
 }
 
+
 function load_in_files(){
-  console.log("PRERUN...");
+  console.log("\nPRERUN...");
   if (typeof(setExecutionState) == "undefined")
     self.postMessage({"cmd": "setExecutionState", "arg": "TXT_EXEC_RECV"});
   else
@@ -65,19 +83,32 @@ function load_in_files(){
 
   ts_prerun_start = Date.now();
 
-  ws.onmessage = recv_input_file;
+  FS.init(input = function(){
+            return null;
+          },
+          output = function(msg){
+            std_out = std_out.concat(String.fromCharCode(msg));
+            console.log(std_out);
+          }, 
+          error  = function(msg){
+            std_err = std_err.concat(String.fromCharCode(msg));
+            console.log(std_err);
+          }
+  );
 
   var dependency_id;
+
   %(inputs)s
 
-  if (request_queue.length === 0) { // task has no input files
-    all_in_files_loaded();
-    return;
-  }
-  else { // start chain of input requests here
-    cur_request = request_queue.shift();
-    request_input_file(cur_request["file"]); 
-  }
+  dependency_id = getUniqueRunDependency(1);
+  Module['addRunDependency'](dependency_id);
+  request_queue.push({"dep_id": dependency_id, "file":"init_dummy"});
+
+  FS.mkdir("/storage");
+  FS.mount(IDBFS, {}, '/storage');
+  FS.syncfs(true, function(err){
+    request_input_file(); 
+  });
 }
 
 function calc_send_durations() {
@@ -100,25 +131,72 @@ function calc_send_durations() {
     storeJobInHistory(Module["thisProgram"], duration_prerun, duration_mainrun, duration_postrun, duration_prerun+duration_mainrun+duration_postrun);
 }
 
-function upload_out_files(){
-  ts_mainrun_stop = Date.now();
 
-  console.log("POSTRUN...");
-  if (typeof(setExecutionState) == "undefined")
-    self.postMessage({"cmd": "setExecutionState", "arg": "TXT_EXEC_SEND"});
-  else
-	setExecutionState(TXT_EXEC_SEND);
+function store_file(path, data){
+  //store file in indexed db
+  tmp_path     = "/storage/" + wf_path + "/" + task_id + "/" + path;
+  storage_path = tmp_path.slice(0, tmp_path.lastIndexOf("/"));
+  f_name       = tmp_path.slice(tmp_path.lastIndexOf("/") + 1);
+  console.log("store file: " + tmp_path);
+  
+  if(!FS.analyzePath(storage_path).exists){
+    FS.createPath("/", storage_path);
+  }
 
-  ts_postrun_start = Date.now();
+  FS.writeFile(storage_path + "/" + f_name, new Uint8Array(data), {encoding:'binary'}); 
+}
 
-  %(outputs)s
 
+function send_file(path, data){
+  //send file to server
+  console.log("send file: " + path);
+  ws.send('\u0002');
+  ws.send(data);
+  ws.send('\u0008');  
+}
+
+
+function upload_next_file(){
+  if(upload_queue.length == 0){
+    FS.syncfs(false, all_files_uploaded);
+  }
+  else{
+    cur_request = upload_queue.shift();
+    ws.onmessage = function (msg){
+                     var file;
+                     var tmp;
+
+                     if(FS.analyzePath(cur_request['file']).exists)
+                       file = FS.readFile(cur_request['file'], {encoding:'binary', flags:'r'});
+                     else
+                       file = new ArrayBuffer(1);
+
+                     tmp = new Uint8Array(msg.data);
+
+                     if(String.fromCharCode(tmp[0]) == '\u0009'){
+                       store_file(cur_request['file'], file);
+                       if((cur_request['file'] == "/std.err") | (cur_request['file'] == "/std.out")){
+                         send_file(cur_request['file'], file);
+                       }
+                     }
+                     else{
+                       send_file(cur_request['file'], file);
+                     }
+                     upload_next_file();
+                   };
+    size = 0;
+    ws.send('\u0003' + cur_request['file'] + ":" + size.toString());
+  } 
+}
+
+
+function all_files_uploaded(){
   ws.onmessage = recv_executable;
   
   ts_postrun_stop = Date.now();
   calc_send_durations();
 
-  console.log("FINISHED");
+  console.log("\nFINISHED");
   console.log("-------------------");
   if (typeof(setExecutionState) == "undefined")
     self.postMessage({"cmd": "setExecutionState", "arg": "TXT_EXEC_FINISHED"});
@@ -129,12 +207,36 @@ function upload_out_files(){
 	self.postMessage({"cmd": "setJobAssignment", "arg": "TXT_NO_JOB"});
   else
 	setJobAssignment(TXT_NO_JOB);
-
+//  exitRuntime();
   request_executable();
-};
+}
+
+function upload_out_files(){
+  ts_mainrun_stop = Date.now();
+
+  console.log("\nPOSTRUN...");
+//  Module["noExitRuntime"] = true;
+  if (typeof(setExecutionState) == "undefined")
+    self.postMessage({"cmd": "setExecutionState", "arg": "TXT_EXEC_SEND"});
+  else
+	setExecutionState(TXT_EXEC_SEND);
+
+  ts_postrun_start = Date.now();
+
+  %(outputs)s
+ 
+  upload_next_file();
+}
+
+
+function onAbort(){
+  console.log("\nERROR...");
+  console.log("An errror ocurred...");
+  upload_out_files();
+}
 
 
 Module['postRun'] = upload_out_files;
 Module['preRun']  = load_in_files;
-
+Module['onAbort'] = onAbort;
 

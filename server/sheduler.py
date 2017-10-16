@@ -15,6 +15,10 @@ class Sheduler:
   def addMachine(machine):
     Sheduler.machines.append(machine)
 
+  @staticmethod
+  def removeMachine(machine):
+    if machine in Sheduler.machines:
+      Sheduler.machines.remove(machine)
 
   @staticmethod
   def wait_min_machines():
@@ -46,8 +50,8 @@ class Sheduler:
     workflow_start_time = 0
     alltasksdone = False
 
-    while not alltasksdone:
-#      alltasksdone = True
+    while True:
+      alltasksdone = True
       for wf in Sheduler.workflows:
         if wf.remaining_tasks() > 0:
           alltasksdone = False
@@ -56,8 +60,16 @@ class Sheduler:
             if workflow_start_time == 0:
               workflow_start_time = time.time()
             Sheduler.execute_task(task)
-
+          
         time.sleep(1)
+
+      if alltasksdone:
+        for machine in Sheduler.machines:
+          for wf in Sheduler.workflows:
+            if not machine.is_busy():
+              machine.clean_workflow_files(wf.wf_path)
+            else:
+              print("machine is busy")
 
     tasks = Sheduler.workflows[0].get_all_tasks()
     print("all tasks done.")
@@ -79,4 +91,4 @@ class Sheduler:
 
   @staticmethod
   def check_file_transfer(task, path):
-    return True
+    return False

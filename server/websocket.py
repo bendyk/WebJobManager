@@ -78,6 +78,7 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
         self.connection = client
         self.address    = address
         self.listener   = None
+        self.__onClose  = None
         self.setDaemon(True)
         self.start()
 
@@ -85,7 +86,11 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
     def run(self):
         self.handshake()
         while True:
-            self.receive()
+            try:
+                self.receive()
+            except IOError:
+                self.shutdown()
+                break
 
 
     def handshake(self):
@@ -106,6 +111,7 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
         ha.update("258EAFA5-E914-47DA-95CA-C5AB0DC85B11".encode())
         return base64.b64encode(binascii.unhexlify(ha.hexdigest())).decode('utf-8')
 
+
     def send_binary(self, data):
         self.send_data(data, self.BINARY)
 
@@ -115,39 +121,38 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
 
 
     def send_data(self, data, data_type):
-	
-        for i in range(int(len(data) / self.MAX_FRAG_SIZE)):            
-            frag  = b'\x01' if data_type == self.TEXT else b'\x02'
-            frag += b'\x7f'
-            frag += (self.MAX_FRAG_SIZE).to_bytes(8, byteorder="big")
-            frag += data[:MAX_FRAG_SIZE]
-            data = data[MAX_FRAG_SIZE:]
-            self.connection.send(frag)
+        try:	
+            for i in range(int(len(data) / self.MAX_FRAG_SIZE)):            
+                frag  = b'\x01' if data_type == self.TEXT else b'\x02'
+                frag += b'\x7f'
+                frag += (self.MAX_FRAG_SIZE).to_bytes(8, byteorder="big")
+                frag += data[:MAX_FRAG_SIZE]
+                data = data[MAX_FRAG_SIZE:]
+                self.connection.send(frag)
   
-        last = b'\x81' if data_type == self.TEXT else b'\x82'
+            last = b'\x81' if data_type == self.TEXT else b'\x82'
 
-        if len(data) < 126:
-            last += len(data).to_bytes(1, byteorder="big")
-        elif len(data) < 2**16:
-            last += b'\x7e'
-            last += len(data).to_bytes(2, byteorder="big")
-        else:
-            last += b'\x7f'
-            last += len(data).to_bytes(8, byteorder="big")
+            if len(data) < 126:
+                last += len(data).to_bytes(1, byteorder="big")
+            elif len(data) < 2**16:
+                last += b'\x7e'
+                last += len(data).to_bytes(2, byteorder="big")
+            else:
+                last += b'\x7f'
+                last += len(data).to_bytes(8, byteorder="big")
 
-        if data_type == self.TEXT: data = data.encode()
+            if data_type == self.TEXT: data = data.encode()
 
-        last += data
+            last += data
 
-        self.connection.send(last)
+            self.connection.send(last)
+
+        except IOError:
+            self.shutdown()
 
 
     def receive(self):
-        try:
-            recv = self.connection.recv(1)
-        except:
-            pass
-            return
+        recv = self.connection.recv(1)
 
         if (len(recv) == 0):
             print("Websocket: received empty message.")
@@ -208,6 +213,9 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
         self.listener = listener
 
 
+    def set_onClose(self, onClose):
+        self.__onClose = onClose
+
     def recv_ping(self):
         print("WSConnection: Ping received")
 
@@ -218,6 +226,7 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
 
     def shutdown(self):
         if not self.closed:
+            if self.__onClose: self.__onClose()
             try:
                 self.connection.shutdown(socket.SHUT_RDWR)
                 self.connection.close()

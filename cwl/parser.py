@@ -46,14 +46,20 @@ class Workflow:
     self.__clts    = {}
     self.__inputs  = {}
     self.__outputs = {}
-
-    wf_object = Parser.parse_cwl(workflow_file)
-    if data_file:
-      for key, data in Parser.parse_data(data_file).items():
-        self.__outputs[key] = data
+ 
+    if workflow_file: 
+      wf_object = Parser.parse_cwl(workflow_file)
+      if data_file:
+        for key, data in Parser.parse_data(data_file).items():
+          self.__outputs[key] = data
     
-    self.__load_steps(wf_object) 
+      self.__load_steps(wf_object) 
+      self.__init_tasks()
 
+    else:
+      #if you didnt specified a workflow_file you've to set the tasks manually with set_tasks() 
+      #(used for depricated workflow input syntax)
+      pass
 
   def __load_clt(self, run_arg):
 
@@ -101,7 +107,7 @@ class Workflow:
  
 
 
-  def get_tasks(self):
+  def __init_tasks(self):
     tasks        = {}
     dependencies = {}
     for identifier, step in self.__steps.items():
@@ -143,9 +149,31 @@ class Workflow:
       for dependency in dependencies[identifier]:
         tasks[identifier].depends_on(tasks[dependency])
     
-    return tasks.values()
+    self.__tasks = tasks.values()
     
+
+  def remaining_tasks(self):
+    remaining = 0
+    for task in self.__tasks:
+      if not task.done:
+        remaining += 1
+    return remaining
+
+
+  def get_free_task(self):
+    for task in self.__tasks:
+      if task.ready() and not task.done:
+        return task
+    return None
+
           
+  def get_all_tasks(self):
+    return self.__tasks
+
+
+  def set_tasks(self, tasks):
+    self.__tasks = tasks
+    return self
 
 if __name__ == '__main__':
   wf    = Workflow("./mjob_example.cwl", "mjob_example.json") 
