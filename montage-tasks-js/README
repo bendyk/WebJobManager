@@ -79,6 +79,27 @@ changed util/CatMap/Makefile.LINUX
   -  CC     =    gcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
   +  CC     =    emcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
   
+changed util/CatSearch/Makefile
+  -  CC     =    gcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+  +  CC     =    emcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+  
+changed util/Examine/Makefile.LINUX
+  -  CC     =    gcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+  +  CC     =    emcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+
+changed util/Exec/Makefile.LINUX
+  -  CC     =    gcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+  +  CC     =    emcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+  
+changed util/FixNaN/Makefile.LINUX
+  -  CC     =    gcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+  +  CC     =    emcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+
+changed util/Hdr/Makefile.LINUX
+  -  CC     =	  cc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+  +  CC     =    emcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+
+
 execute in base directory (this will generate LLVM bitcode files for each Montage tool in ./bin/)
   make
   
