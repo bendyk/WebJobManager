@@ -1,33 +1,41 @@
-############ CHANGES FOR COMPILING MONTAGE TOOLS TO JS FILES ########################
+############ CHANGES FOR COMPILING MONTAGE TOOLS TO WEB ASSEMBLY #############
 
-export CC=emcc
+Set the emscripten compiler in current environment:
+     export CC=emcc
 
 
-changed lib/src/freetype-2.5.4/builds/exports.mk:
+Changed lib/src/freetype-2.5.4/builds/exports.mk:
      ifeq ($(CCexe),)
        CCexe := $(CC)
      endif 
   +  CCexe:='gcc'  
 
 
-execute
+Execute
      lib/src/freetype-2.5.4/builds/unix/configure CC=emcc
 
 
-changed lib/src/mtbl/Makefile 
-changed lib/src/svc/Makefile
-  -  CC =       gcc -g -I. -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
-  +  CC =       emcc -g -I. -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+Change the compiler setting in all Makefiles with the following shellscript:
 
-changed Montage/Makefile.LINUX
-changed util/Archive/ArchiveGet/Makefile.LINUX
-changed lib/src/coord/Makefile
-changed lib/src/pixbounds/Makefile
-changed lib/src/two_plane_v1.1/Makefile
-  -  CC     =      gcc
-  +  CC     =      emcc
+#!/bin/sh
 
-changed lib/src/Makefile:
+TOREPLACE="gcc"
+COMPILER="emcc"
+
+FILES=`find . -iname Makefile.LINUX && find . -iname Makefile`
+
+for f in $FILES; do
+	#echo "DEBUG file: $f"
+	sed -i "s/$TOREPLACE/$COMPILER/g" $f
+done
+
+# effect of changes:
+#  -  CC =       gcc -g -I. -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+#  +  CC =       emcc -g -I. -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+
+
+
+Change lib/src/Makefile:
   -  (cd cfitsio-3.25; ./configure; make; cp libcfitsio.a ../..; cp *.h ../../include)
   +  (cd cfitsio-3.25; ./configure CC=emcc; make; cp libcfitsio.a ../..; cp *.h ../../include)
 
@@ -37,36 +45,46 @@ changed lib/src/Makefile:
   -  (cd freetype-2.5.4; ./configure --prefix=`pwd`/../../freetype --without-png; make; make install)
   +  (cd freetype-2.5.4; ./configure --prefix=`pwd`/../../freetype --without-png --without-zlib; make; make install)
 
-changed grid/Pegasus/Makefile.LINUX
-changed util/Archive/ArchiveExec/Makefile
-changed util/BestImage/Makefile
-changed util/Calibrate/Makefile
-changed util/CatMap/Makefile.LINUX  
-changed util/CatSearch/Makefile
-changed util/Examine/Makefile.LINUX
-changed util/Exec/Makefile.LINUX
-changed util/FixNaN/Makefile.LINUX
-changed util/JPEG/Makefile.LINUX
-changed util/Pad/Makefile.LINUX
-changed util/Pix2Coord/Makefile.LINUX
-changed util/Rotate/Makefile.LINUX
-changed util/Search/Makefile.LINUX
-changed util/ShrinkHdr/Makefile.LINUX
-changed util/TblExec/Makefile
-changed util/Transpose/Makefile.LINUX
-changed util/Viewer/Makefile.LINUX
-  -  CC     =    gcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
-  +  CC     =    emcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 
-changed util/Archive/ArchiveList/Makefile.LINUX
-changed util/Hdr/Makefile.LINUX
-  -  CC     =	  cc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
-  +  CC     =    emcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+Fix the byteswapping problem that emerges with the "cfitsio" utility:
+
+The patch should be applied in the file "./lib/src/cfitsio-3.25/fitsio2.h" where several macros test 
+whether the current platform is a little endian or big endian one. As emscripten only supports 
+little-endianess, define the following macro at the end of the tests:
+     #else
+  +  #define MACHINE NATIVE
+  +  #define BYTESWAPPED TRUE
+     #endif
 
 
-execute in base directory (this will generate LLVM bitcode files for each Montage tool in ./bin/)
-  make
-  
-rename each file to <filename>.bc in ./bin/ and execute on each file
-  emcc -O3 -s WASM=1 bin/<file>.bc -o bin/<file>.html
-  
+Execute in base directory (this will generate LLVM bitcode files for each Montage tool in ./bin/)
+     make
+
+
+Rename each file to <filename>.bc in ./bin/ and execute on each file
+     emcc -O3 -s WASM=1 bin/<file>.bc -o bin/<file>.js
+Increase manually total memory usage for mBackground tool (as default setting is exceeded at runtime):
+     emcc -O3 -s WASM=1 -s TOTAL_MEMORY=48496640 bin/mBackground.bc -o bin/mBackground.js
+
+
+############ ADJUSTMENTS FOR EXECUTION WITH NODE JS ##############
+In order to access filesystem of host machine, some pre-run code has to be added to a compiled emscripten-javascript file:
+  +  Module['preRun'] = function() { if (ENVIRONMENT_IS_NODE) { FS.mkdir('io'); FS.mount(NODEFS, { root: '.' }, '/io'); } };
+
+Thus, all files that have to be accessed from within the executed wasm module in node must be prefixed with the 
+virtual directory "io", so that, for instance, we can execute the tool mConcatFit with the following command:
+     node mConcatFit.js io/statfile.tbl io/fits.tbl io
+     
+This implies some changes to the arguments when calling the following tools:
+- mConcatFit: change statdir argument (current directory) to "io"
+- mBackground: input file pimages.tbl has to contain the "io" prefixes before the file names. Please consider 
+     to increase the spacing in the corresponding table header columns, as their length in characters encodes 
+     the string size in the table content (otherwise the files cannot be found).
+- mImgtbl: files sizes in the newcimages.tbl file are wrong when executed as a wasm module. The reason for this 
+     is a bug in "Montage/print_rec.c" where the output of the file size is treated as a long long type, but
+     the corresponding variable is actually an int when compiled with emscripten. You can fix this like so:
+  -  fprintf(tblf, " %12lld  ", hdr_rec->size);
+  +  fprintf(tblf, " %10d  ", hdr_rec->size);
+- mAdd: typically mAdd is not called with the "-p" argument, but in order to find the files as specified in
+     newcimages.tbl (which have no "io/" prefix), this argument has to be used like, for instance:
+     node mAdd.js -p io -e io/newcimages.tbl io/big_region.hdr io/mosaic.fits
