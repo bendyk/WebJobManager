@@ -19,6 +19,24 @@ var duration_prerun = 0;
 var duration_mainrun = 0;
 var duration_postrun = 0;
 
+console.log("job received");
+
+function load_binary(info, callback){
+  ws.onmessage = function(msg){
+                   console.log("binary loaded");
+                   WebAssembly.instantiate(new Uint8Array(msg.data), info).then(function(output){
+                     callback(output.instance);
+                   }).catch(function(reason){
+                     console.log("couldn't instantiate wasm");
+                     Module['printErr']("could not instantiate wasm:" + reason);
+                     Module['quit'](1, reason);
+                   });
+                                                                
+                 }; 
+  console.log("request binary");
+  ws.send('\u000b');
+  return {};
+}
 
 function request_input_file(){ 
     cur_request = request_queue.shift();
@@ -236,7 +254,7 @@ function onAbort(){
 }
 
 
-Module['postRun'] = upload_out_files;
-Module['preRun']  = load_in_files;
-Module['onAbort'] = onAbort;
-
+Module['preRun']          = load_in_files;
+Module['postRun']         = upload_out_files;
+Module['onAbort']         = onAbort;
+Module['instantiateWasm'] = load_binary;

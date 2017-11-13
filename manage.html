@@ -38,6 +38,13 @@
     </li>
   </ul>
 
+  <p>Binary files</p>
+  <ul style="list-style-type:none">
+    <li>
+      <input id="wasm" name="wasm-0" type="file">
+    </li>
+  </ul>
+
   <p>Input files</p>
   <ul style="list-style-type:none">
     <li>
@@ -71,6 +78,7 @@
 
    document.getElementById("cwl").addEventListener("change", addFileInput, false);
    document.getElementById("jss").addEventListener("change", addFileInput, false);
+   document.getElementById("wasm").addEventListener("change", addFileInput, false);
    document.getElementById("inputs").addEventListener("change", addFileInput, false);
 
 </script>

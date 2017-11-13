@@ -5,7 +5,7 @@ from .sheduler import Sheduler
 
 class Machine:
 
-    EXECUTABLE  = 0
+    NEW_JOB     = 0
     INPUT_FILE  = 1
     OUTPUT_FILE = 2
     OUTPUT_PATH = 3
@@ -16,6 +16,7 @@ class Machine:
     OUTPUT_FILE_END = 8
     OUTPUT_KEEP = 9
     OUTPUT_SEND = 10
+    WASM_FILE   = 11
 
 
     def __init__(self, connection):
@@ -84,22 +85,10 @@ class Machine:
     def clean_workflow_files(self, wf_path):
         ##Cleaning indexeddb files 
         self.__busy = True
-        execution = """
-        console.log("cleanup workflow files(TODO)");
-        /*FS.mkdir("/storage");
-        FS.synfs(true,function(err){
-          if(FS.analyzePath("/storage/%(wf)s").exists){
-            FS.rmdir("/storage/%(wf)s");
-            FS.syncfs(false, function(err){
-              console.log("done");
-              ws.onmessage = recv_executable;
-              request_executable();
-            });
-          }            
-        });*/
-        """
         print("cleaning %s on %s:%d" % ((wf_path,) + self.connection.address))
-        self.connection.send_text(execution % {"wf":wf_path})         
+
+        with open("rm_workflow.js", "r") as f:
+            self.connection.send_text("\n".join(['wf_path="%s";' % wf_path, f.read()]))        
 
  
     def conn_listener(self, data):
@@ -114,7 +103,7 @@ class Machine:
             cmd  = data[0]
             payload = data[1:]
 
-            if cmd == self.EXECUTABLE:
+            if cmd == self.NEW_JOB:
                 self.set_ready()
                 #print("%s: ABSOLUTE time: %dms" %(self.connection.address[0], int(round(self.abs_time * 1000))))
 
@@ -149,6 +138,9 @@ class Machine:
                 self.task.set_post_time(int(payload.decode()))
                 #print("%s: POSTRUN time: %sms" %(self.connection.address[0], payload.decode()))
             
+            elif cmd == self.WASM_FILE:
+                self.send_file(self.task.wasm)
+
             else: 
                 print("%s:%d: UNKNOWN command (%d)  received." % (self.connection.address + (cmd,)))
                 #print("%s: UNKNOWN data received: %s" % (self.connection.address[0], payload.decode()))

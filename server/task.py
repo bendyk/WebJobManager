@@ -3,7 +3,7 @@ import glob
 
 class Task:
 
-    def __init__(self, executable, args=None, wf_path="./", identifier=""):
+    def __init__(self, js_executable, args=None, wf_path="./", identifier=""):
         self.identifier   = identifier
         self.args         = args
         self.path         = wf_path + "/" + identifier
@@ -11,7 +11,8 @@ class Task:
         self.in_files     = []
         self.out_files    = []
         self.done         = False
-        self.executable   = wf_path + "/" + executable
+        self.executable   = wf_path + "/" + js_executable
+        self.wasm         = wf_path + "/" + js_executable.rsplit(".",1)[0] + ".wasm"
         self.dependencies = []
         self.pre_time     = 0
         self.main_time    = 0
