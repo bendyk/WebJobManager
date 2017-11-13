@@ -19,12 +19,18 @@ var duration_prerun = 0;
 var duration_mainrun = 0;
 var duration_postrun = 0;
 
-console.log("job received");
 
 function load_binary(info, callback){
   ws.onmessage = function(msg){
-                   console.log("binary loaded");
-                   WebAssembly.instantiate(new Uint8Array(msg.data), info).then(function(output){
+                   var data = new Uint8Array(msg.data);
+                   console.log("wasm file loaded: " + data.length + " bytes");
+                    
+                   if(WebAssembly.validate(data)){
+                     console.log("wasm validation correct");
+                   } else{
+                     console.log("wasm validation problem");
+                   }
+                   WebAssembly.instantiate(data, info).then(function(output){
                      callback(output.instance);
                    }).catch(function(reason){
                      console.log("couldn't instantiate wasm");
@@ -33,10 +39,11 @@ function load_binary(info, callback){
                    });
                                                                 
                  }; 
-  console.log("request binary");
+  console.log("\nWEBASSEMBLY");
   ws.send('\u000b');
   return {};
 }
+
 
 function request_input_file(){ 
     cur_request = request_queue.shift();
@@ -71,7 +78,6 @@ function recv_input_file(msg){
 
 function all_in_files_loaded() {
     ts_prerun_stop  = Date.now();
-    console.log(FS.readdir("/"));
     // inform about starting job execution
     if (typeof(setExecutionState) == "undefined")
 		self.postMessage({"cmd": "setExecutionState", "arg": "TXT_EXEC_RUN"});
@@ -106,11 +112,9 @@ function load_in_files(){
           },
           output = function(msg){
             std_out = std_out.concat(String.fromCharCode(msg));
-            console.log(std_out);
           }, 
           error  = function(msg){
             std_err = std_err.concat(String.fromCharCode(msg));
-            console.log(std_err);
           }
   );
 

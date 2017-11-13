@@ -53,6 +53,8 @@ class Task:
 
         js_inputs  = self.__generate_js_input_files()
         js_outputs = self.__generate_js_output_files()
+        data.append('console.log("NEW JOB: %s");' % self.identifier)
+
         with open("tasks.js", "r") as f:
             data.append(f.read() % {"inputs": js_inputs, "outputs": js_outputs})
 
@@ -86,10 +88,7 @@ class Task:
     def __generate_js_output_files(self):
         data      = []
      
-        data.append("  console.log(FS.readdir(\"/\"));")
-        data.append("  console.log(\"STDOUT:\");");
         data.append("  console.log(std_out);");
-        data.append("  console.log(\"STDERR:\");");
         data.append("  console.log(std_err);");
         data.append("  FS.writeFile(\"/std.out\", std_out, {encoding:'utf8'});");
         data.append("  FS.writeFile(\"/std.err\", std_err, {encoding:'utf8'});");

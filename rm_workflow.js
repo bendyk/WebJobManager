@@ -16,24 +16,48 @@
 var Module;
 if (!Module) Module = (typeof Module !== 'undefined' ? Module : null) || {};
 
+function rmdirTree(path){
+  var lookup = FS.lookupPath(path);
+  var stat   = FS.stat(path);
+  
+  if(FS.isFile(stat.mode)){
+    FS.unlink(path);
+  }
+  else if(FS.isDir(stat.mode)){
+    var entries = FS.readdir(path);
+    console.log(entries);
+    entries.forEach(function(entry){
+      if([".", ".."].indexOf(entry) == -1){
+        rmdirTree(path + "/" + entry);
+      }
+    });
+    FS.rmdir(path);
+  }
+  else{
+    throw new FS.ErrnoError(ERRNO_CODES.EOPNOTSUPP);
+  }
+}
 
 Module['preRun'] = function(){
-/*                     Module['addRunDependency']("fileremove");
+                     Module['addRunDependency']("fileremove");
                      FS.mkdir("/storage");
                      FS.mount(IDBFS, {}, "/storage");
                      FS.syncfs(true, function(err){
                        if(FS.analyzePath("/storage/" + wf_path).exists){
-                         FS.unlink("/storage/" + wf_path);
+                         console.log("remove " + wf_path + "from indexedDB");
+                         rmdirTree("/storage/" + wf_path);
                        }
                        FS.syncfs(false, function(err){
                          Module['removeRunDependency']("fileremove");
                        });
                      });
-*/};
+};
 
 
 Module['postRun'] = function(){
                       ws.onmessage = recv_executable;
+                      console.log("\nFINISHED");
+                      console.log("-------------------");
                       request_executable();
 };
 // Sometimes an existing Module object exists with properties

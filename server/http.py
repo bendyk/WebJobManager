@@ -41,10 +41,11 @@ class RequestHandler(BaseHTTPRequestHandler):
     def do_POST(s):
         content_length = int(s.headers['Content-Length'])
         file_content   = s.rfile.read(content_length)
+        boundary       = s.headers['Content-Type'].split("boundary=")[-1].encode()
 
         workflow = None
         try:
-            workflow = s.create_workflow(file_content)
+            workflow = s.create_workflow(file_content, boundary)
         except:
             workflow = None
             pass
@@ -63,10 +64,10 @@ class RequestHandler(BaseHTTPRequestHandler):
             s.wfile.write(f.read())
 
 
-    def create_workflow(s, data):
+    def create_workflow(s, data, boundary):
         files  = {}
         regex  = re.compile(b'.*\n.* name="(.*)".*filename="(.*)"\r\n.*', re.DOTALL)
-        chunks = data.split(b'-'*29)
+        chunks = data.split(boundary)
 
         wf_path = "./workflows/%d" % int(round(time.time() * 1000))
 
@@ -76,7 +77,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         for chunk in chunks:
             filepointer = chunk.find(b'\r\n\r\n')
             meta_data   = chunk[0:filepointer]
-            file_data   = chunk[filepointer+4:-2]
+            file_data   = chunk[filepointer+4:-4]
             matcher     = regex.match(meta_data)
 
             if matcher and (filepointer > -1):
@@ -89,7 +90,6 @@ class RequestHandler(BaseHTTPRequestHandler):
 
                     files[f_id] = f_name
                     print("Files received: %s -> %s" %(f_id, f_name))
-
 
         data_file = wf_path + "/" + files["workflow.json"] if "workflow.json" in files else ""
     

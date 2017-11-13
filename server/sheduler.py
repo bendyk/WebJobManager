@@ -91,7 +91,7 @@ class Sheduler:
 
   @staticmethod
   def check_file_transfer(task, path):
-    return False
+    return True
     if Sheduler.count_machines() == 1:
       return False
     else:
