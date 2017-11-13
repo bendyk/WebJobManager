@@ -3,11 +3,6 @@
 export CC=emcc
 
 
-change cc alternative to emcc
-  sudo update-alternatives --config cc
-
-
-
 changed lib/src/freetype-2.5.4/builds/exports.mk:
      ifeq ($(CCexe),)
        CCexe := $(CC)
@@ -19,59 +14,18 @@ execute
      lib/src/freetype-2.5.4/builds/unix/configure CC=emcc
 
 
-changed Montage/Makefile.LINUX:
-  -  CC    =    gcc
-  +  CC    =    emcc
-
-changed lib/src/pixbounds/Makefile:
-  -  CC    =    gcc
-  +  CC    =    emcc
-  
-
 changed lib/src/mtbl/Makefile 
-  -  CC = gcc -g -I . -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
-  +  CC = emcc -g -I . -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
-
-
-changed lib/src/two_plane_v1.1/Makefile
-  -  CC      =       gcc
-  +  CC      =       emcc
-
-
 changed lib/src/svc/Makefile
-  -  CC =         gcc -g -I. -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
-  +  CC =         emcc -g -I. -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+  -  CC =       gcc -g -I. -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+  +  CC =       emcc -g -I. -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 
-
-changed util/JPEG/Makefile.LINUX
-  -  CC     =    gcc -std=c99 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -std=c99
-  +  CC     =    emcc -std=c99 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -std=c99
-
-
-changed util/Archive/ArchiveList/Makefile.LINUX
-  -  CC     =     cc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
-  +  CC     =     emcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
-
-
+changed Montage/Makefile.LINUX
 changed util/Archive/ArchiveGet/Makefile.LINUX
+changed lib/src/coord/Makefile
+changed lib/src/pixbounds/Makefile
+changed lib/src/two_plane_v1.1/Makefile
   -  CC     =      gcc
   +  CC     =      emcc
-
-
-changed util/Archive/ArchiveExec/Makefile
-  -  CC     =   gcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
-  +  CC     =   emcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
-
-
-changed lib/src/coord/Makefile
-  -  CC      =   gcc
-  +  CC      =   emcc
-
-
-changed grid/Pegasus/Makefile.LINUX
-  -  CC     =    gcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
-  +  CC     =    emcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
-
 
 changed lib/src/Makefile:
   -  (cd cfitsio-3.25; ./configure; make; cp libcfitsio.a ../..; cp *.h ../../include)
@@ -83,4 +37,36 @@ changed lib/src/Makefile:
   -  (cd freetype-2.5.4; ./configure --prefix=`pwd`/../../freetype --without-png; make; make install)
   +  (cd freetype-2.5.4; ./configure --prefix=`pwd`/../../freetype --without-png --without-zlib; make; make install)
 
+changed grid/Pegasus/Makefile.LINUX
+changed util/Archive/ArchiveExec/Makefile
+changed util/BestImage/Makefile
+changed util/Calibrate/Makefile
+changed util/CatMap/Makefile.LINUX  
+changed util/CatSearch/Makefile
+changed util/Examine/Makefile.LINUX
+changed util/Exec/Makefile.LINUX
+changed util/FixNaN/Makefile.LINUX
+changed util/JPEG/Makefile.LINUX
+changed util/Pad/Makefile.LINUX
+changed util/Pix2Coord/Makefile.LINUX
+changed util/Rotate/Makefile.LINUX
+changed util/Search/Makefile.LINUX
+changed util/ShrinkHdr/Makefile.LINUX
+changed util/TblExec/Makefile
+changed util/Transpose/Makefile.LINUX
+changed util/Viewer/Makefile.LINUX
+  -  CC     =    gcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+  +  CC     =    emcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 
+changed util/Archive/ArchiveList/Makefile.LINUX
+changed util/Hdr/Makefile.LINUX
+  -  CC     =	  cc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+  +  CC     =    emcc -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+
+
+execute in base directory (this will generate LLVM bitcode files for each Montage tool in ./bin/)
+  make
+  
+rename each file to <filename>.bc in ./bin/ and execute on each file
+  emcc -O3 -s WASM=1 bin/<file>.bc -o bin/<file>.html
+  
