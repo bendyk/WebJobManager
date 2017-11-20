@@ -63,6 +63,7 @@ class Sheduler:
           
         time.sleep(1)
 
+#TODO Dont clean machines if its already done
       if alltasksdone:
         for machine in Sheduler.machines:
           for wf in Sheduler.workflows:
