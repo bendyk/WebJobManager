@@ -19,6 +19,16 @@ var duration_prerun = 0;
 var duration_mainrun = 0;
 var duration_postrun = 0;
 
+function sow2(){
+  ws.onmessage = function(msg){
+    var data = new Uint8Array(msg.data);
+    console.log("websocket callback triggered");
+    Module.ccall("receive_on_websocket", null, null, null);
+  }
+  console.log("requesting from websocket");
+  ws.send('\u000c');
+  console.log("send on websocket");
+}
 
 function load_binary(info, callback){
   ws.onmessage = function(msg){
@@ -41,6 +51,7 @@ function load_binary(info, callback){
                  }; 
   console.log("\nWEBASSEMBLY");
   ws.send('\u000b');
+
   return {};
 }
 
@@ -107,7 +118,7 @@ function load_in_files(){
 
   ts_prerun_start = Date.now();
 
-  FS.init(input = function(){
+  /*FS.init(input = function(){
             return null;
           },
           output = function(msg){
@@ -116,7 +127,7 @@ function load_in_files(){
           error  = function(msg){
             std_err = std_err.concat(String.fromCharCode(msg));
           }
-  );
+  );*/
 
   var dependency_id;
 

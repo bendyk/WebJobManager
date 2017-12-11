@@ -17,7 +17,7 @@ class Machine:
     OUTPUT_KEEP = 9
     OUTPUT_SEND = 10
     WASM_FILE   = 11
-
+    TEST_PING   = 12
 
     def __init__(self, connection):
         connection.set_listener(self.conn_listener)
@@ -140,6 +140,12 @@ class Machine:
             
             elif cmd == self.WASM_FILE:
                 self.send_file(self.task.wasm)
+
+            elif cmd == self.TEST_PING:
+                response = 1
+                print("received testping")
+                self.connection.send_binary(response.to_bytes(1, byteorder='big'))
+                print("send back ping")
 
             else: 
                 print("%s:%d: UNKNOWN command (%d)  received." % (self.connection.address + (cmd,)))
