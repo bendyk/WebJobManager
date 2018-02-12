@@ -70,15 +70,21 @@ class Task:
         data = []
         data.append("  wf_path = \"%s\";" % self.wf_path)
         data.append("  task_id = \"%s\";" % self.identifier)
+        ##TODO check which methods to use for file loading(preload, async load)
+        #data.append("  receive_file = receive_asyncload;") 
+        #data.append("  load_file    = asyncload_file;") 
+        data.append("  receive_file = receive_asyncload;") 
+        data.append("  load_file    = asyncload_file;") 
+        ###
         data.append("  FS.createPath(\"/\", wf_path);")
         data.append("  FS.createLink(wf_path, task_id, \"/\");")
         data.append("  console.log(wf_path);")
-
+ 
+        i = 0;
         for f_path in self.in_files:
-            #for f_name in glob.glob(f_path): # this does not work, as some of these files do not exist, yet!
-            data.append("  dependency_id = getUniqueRunDependency(1);")
-            data.append("  Module['addRunDependency'](dependency_id);") 
-            data.append("  request_queue.push({\"dep_id\": dependency_id, \"file\": \"%s\"});" % f_path)
+            i += 1
+            print("insert file: %s" % f_path);
+            data.append("request_files[%d] = \"%s\";" % (i, f_path))
             if "/" in f_path:
               data.append("  if(!FS.analyzePath(\"%s\").exists){FS.createPath(\"/\", \"%s\");}" % (f_path.rsplit("/",1)[0], f_path.rsplit("/",1)[0]))
 

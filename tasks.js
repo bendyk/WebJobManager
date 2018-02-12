@@ -1,4 +1,5 @@
 var Module        = {};
+var request_files = {};
 var cur_request   = {};
 var request_queue = [];
 var upload_queue  = [];
@@ -19,18 +20,159 @@ var duration_prerun = 0;
 var duration_mainrun = 0;
 var duration_postrun = 0;
 
-function sow2(){
-  ws.onmessage = function(msg){
-    var data = new Uint8Array(msg.data);
-    console.log("websocket callback triggered");
-    Module.ccall("receive_on_websocket", null, null, null);
+
+/*function pre___syscall145(which, varargs){
+
+  SYSCALLS.varargs = varargs;
+  var stream       = SYSCALLS.getStreamFromFD();
+  var iov          = SYSCALLS.get();
+  var iovcnt       = SYSCALLS.get();
+  var request_len  = 0;
+  var ret;
+
+
+  if(!("virtual" in stream.node)){
+    Module.printErr("reading from fs");
+    //ret = ___syscall145(which, varargs);
   }
-  console.log("requesting from websocket");
-  ws.send('\u000c');
-  console.log("send on websocket");
+  else{  
+    Module.printErr("reading from server");
+    if(stream.node.usedBytes >= stream.node.maxBytes) return 0;
+    ws.onmessage = function(msg){
+      var a = [];
+      for(var x in msg) a.push(x);
+      console.log(a);
+      Module.printErr("received from server");
+      //written = FS.write(stream, new Uint8Array(msg.data), 0, msg.data.byteLength, stream.node.usedBytes);
+      written = stream.stream_ops.write(stream, new Uint8Array(msg.data), 0, msg.data.byteLength, stream.node.usedBytes);
+      Module.printErr("written:" + msg.data.byteLength);
+      Module.printErr("position:" + stream.position);
+      Module.printErr("used_bytes:" + stream.node.usedBytes);
+      Module.printErr("max_bytes:" + stream.node.maxBytes);
+      //bytes_read = ___syscall145(which, varargs); 
+      setValue(___async_retval, msg.data.byteLength, 'i32');
+      Module.printErr('syscall! ' + [145, 'done']);
+      ws.onmessage = function(){return;};
+      Module["_emscripten_async_resume"]();
+    };
+
+
+    for(var x = 0; x < iovcnt; x++){ 
+      request_len += HEAP32[(((iov)+(x*8+4))>>2)];
+    }
+
+    request_len = (stream.position + request_len) - stream.node.usedBytes;
+    if(request_len < 1){
+      //ret = ___syscall145(which, varargs);
+    }
+    else{
+      sendbuf    = new Uint8Array(12);
+      sendbuf[3] = 14; ////'\u000e'
+
+      tmp    = new Uint32Array(sendbuf.buffer, 4);
+      tmp[0] = stream.node.id;
+      tmp[1] = request_len;
+
+      Module.printErr("request length: " + request_len);
+      Module.printErr(sendbuf.buffer.slice(3));
+      ws.send(sendbuf.buffer.slice(3));
+      Module.ccall("emscripten_sleep", null, ['number'], [10000]);
+      Module.printErr('syscall! ' + [145, 'pending...']);
+      ret = 1024;
+    }
+  }
+  //return(ret); 
+}
+*/
+/*
+function pre___syscall5(which, varargs){
+  var fd           = -2;
+  SYSCALLS.varargs = varargs;
+  var file_path    = SYSCALLS.getStr();
+  var flags        = SYSCALLS.get();
+  var mode         = SYSCALLS.get();
+
+  if(!FS.analyzePath(file_path).exists){
+      //CREATE FILE OR LOAD FROM DB IF NOT EXISTS
+      if(FS.analyzePath(storage_path).exists){
+        var data = FS.readFile(storage_path, {encoding:'binary', flags:'r'});
+        FS.writeFile(file_path, new Uint8Array(data), {encoding:'binary'});
+        Module.printErr("load file from DB: " + file_path);
+      }
+      else{
+        new_node          = FS.createFile("/", file_path, {}, true, true);
+        new_node.virtual  = true;
+        new_node.maxBytes = 0;     
+      }
+  }
+ 
+  var lookup = FS.lookupPath(file_path);
+
+  if('virtual' in lookup.node){
+    //READ FROM SERVER
+    Module.printErr("request file open from server: " + file_path);
+
+    ws.onmessage = function(msg){
+      lookup.node.maxBytes = new Uint32Array(msg.data)[0];
+
+      var new_fd = ___syscall5(which, varargs);
+      setValue(___async_retval, new_fd, 'i32');
+      Module.printErr('syscall! ' + [5, 'done']);
+      ws.onmessage = function(){return;};
+      Module["_emscripten_async_resume"]();
+    };
+    
+    tmp = new Uint32Array([lookup.node.id]);
+    ws.send('\u000d'+ String.fromCharCode(tmp[0], tmp[1], tmp[2], tmp[3]) + file_path);
+    Module.ccall("emscripten_sleep", null, ['number'], [10000]);
+    Module.printErr('syscall! ' + [5, 'pending...']);
+    fd = -2; 
+  }
+  else{
+    //READ LOCAL
+    Module.printErr("REEEEADLOCAL");
+    fd = ___syscall5(which, varargs);
+  }
+  
+  return(fd);
+}*/
+
+function pre___syscall5(which, varargs){
+  var fd           = -2;
+  SYSCALLS.varargs = varargs;
+  var file_path    = SYSCALLS.getStr();
+  var flags        = SYSCALLS.get();
+  var mode         = SYSCALLS.get();
+
+  if(!FS.analyzePath(file_path).exists){
+    var receive_interval = setInterval(function(){
+      if(FS.analyzePath(file_path).exists){
+        fd = ___syscall5(which, varargs);
+        setValue(___async_retval, fd, 'i32');
+        Module.printErr('syscall! ' + [5, 'done']);
+        clearInterval(receive_interval);
+        Module["_emscripten_async_resume"]();
+      }
+      else{
+        Module.printErr('waiting for file' + file_path);
+        Module.printErr('syscall! ' + [5, 'pending...']);
+      }
+    }, 2000);
+    Module.ccall("emscripten_sleep", null, ['number'], [100000]);
+    Module.printErr('syscall! ' + [5, 'pending...']);
+    fd = -2;   
+  }
+  else{
+    fd = ___syscall5(which, varargs);
+  }
+
+  return(fd);
 }
 
+
 function load_binary(info, callback){
+  info['env']['___syscall5'] = pre___syscall5;
+
   ws.onmessage = function(msg){
                    var data = new Uint8Array(msg.data);
                    console.log("wasm file loaded: " + data.length + " bytes");
@@ -55,39 +197,23 @@ function load_binary(info, callback){
   return {};
 }
 
+function load_from_indexedDB(file){
+  var success      = false;
+  var storage_path = "/storage/" + wf_path + "/" + file;
 
-function request_input_file(){ 
-    cur_request = request_queue.shift();
-  
-    if(request_queue.length == 0){
-      all_in_files_loaded();
-    }
-    else {
-      storage_file_path = "/storage/" + wf_path + "/" + cur_request["file"];
+  if(FS.analyzePath(storage_path).exists){
+    console.log("Load file from DB: " + file);
+    var data = FS.readFile(storage_path, {encoding:'binary', flags:'r'});
+    FS.writeFile(file, new Uint8Array(data), {encoding:'binary'}); 
+    success = true;
+  }
 
-      if(FS.analyzePath(storage_file_path).exists){
-        console.log("Load file: " + cur_request["file"]);
-        var msg = {};
-        msg.data = FS.readFile(storage_file_path, {encoding:'binary', flags:'r'});
-        recv_input_file(msg);  
-      }
-      else{
-        console.log("request file: " + cur_request["file"]);
-        ws.onmessage = recv_input_file;
-        ws.send('\u0001' + cur_request['file']);
-      }
-    }
-}
-
-function recv_input_file(msg){
-    path = cur_request["file"].slice(cur_request["file"].indexOf("/")+1);
-    FS.writeFile(path, new Uint8Array(msg.data), {encoding:'binary'});
-    Module['removeRunDependency'](cur_request["dep_id"]);
-    request_input_file();
+  return success;
 }
 
 
-function all_in_files_loaded() {
+
+function preRun_finished() {
     ts_prerun_stop  = Date.now();
     // inform about starting job execution
     if (typeof(setExecutionState) == "undefined")
@@ -102,15 +228,52 @@ function all_in_files_loaded() {
 
     console.log("\nRUNNING... \n" + Module['thisProgram']);
 
-    ws.onmessage = function(msg) {};
+    //ws.onmessage = function(msg) {};
     
     ts_mainrun_start = Date.now();
-    Module['removeRunDependency'](cur_request["dep_id"]);
+    Module['removeRunDependency']('indexed_DB');    
 }
 
 
+function save_received_file(msg){
+  var id   = new Uint32Array(msg.data.slice(0,4))[0];
+  var path = request_files[id];
+  FS.writeFile(path, new Uint8Array(msg.data, 4), {encoding: 'binary'}); 
+  console.log("received file: " + path);
+  delete request_files[id];
+  return id;
+}
+
+function send_request(id, file){
+  ws.send('\u0001' + String.fromCharCode(id[0], id[1], id[2], id[3]) + file); 
+}
+
+function receive_asyncload(msg){
+  save_received_file(msg);
+}
+function receive_preload(msg){
+  var id = save_received_file(msg);
+  Module['removeRunDependency'](id);    
+  if(runDependencies == 1) preRun_finished();
+}
+
+function asyncload_file(id, file){
+  console.log("load file async: " + file);
+  send_request(new Uint32Array([id]), file);
+}
+
+function preload_file(id, file){
+  console.log("preload file: " + file);
+  var new_id = getUniqueRunDependency(id);
+  delete request_files[id];
+  request_files[new_id] = file;
+  send_request(new Uint32Array([new_id]), file);
+  Module['addRunDependency'](new_id);
+}
+
 function load_in_files(){
   console.log("\nPRERUN...");
+  Module['env']
   if (typeof(setExecutionState) == "undefined")
     self.postMessage({"cmd": "setExecutionState", "arg": "TXT_EXEC_RECV"});
   else
@@ -129,20 +292,29 @@ function load_in_files(){
           }
   );*/
 
-  var dependency_id;
-
+  var receive_file; 
+  var load_file;
+  
   %(inputs)s
-
-  dependency_id = getUniqueRunDependency(1);
-  Module['addRunDependency'](dependency_id);
-  request_queue.push({"dep_id": dependency_id, "file":"init_dummy"});
+ 
+  Module['addRunDependency']('indexed_DB');
 
   FS.mkdir("/storage");
   FS.mount(IDBFS, {}, '/storage');
   FS.syncfs(true, function(err){
-    request_input_file(); 
+
+    ws.onmessage = receive_file;
+
+    for(var id in request_files){
+      if(!load_from_indexedDB(request_files[id])){
+        load_file(id, request_files[id]);
+      }
+    };
+    
+    if(runDependencies == 1) preRun_finished();
   });
 }
+
 
 function calc_send_durations() {
 //console.log("prerun: " + ts_prerun_start + " " + ts_prerun_stop);
@@ -245,6 +417,12 @@ function all_files_uploaded(){
 }
 
 function upload_out_files(){
+
+  if(Object.keys(request_files).length > 0){
+    setTimeout(upload_out_files, 500);
+    return;
+  } 
+
   ts_mainrun_stop = Date.now();
 
   console.log("\nPOSTRUN...");
@@ -259,6 +437,7 @@ function upload_out_files(){
   %(outputs)s
  
   upload_next_file();
+  return;
 }
 
 

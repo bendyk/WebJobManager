@@ -18,11 +18,14 @@ class Machine:
     OUTPUT_SEND = 10
     WASM_FILE   = 11
     TEST_PING   = 12
+    INPUT_OPEN  = 13
+    INPUT_DATA  = 14
 
     def __init__(self, connection):
         connection.set_listener(self.conn_listener)
         connection.set_onClose(self.connection_closed)
-        self.connection = connection
+        self.connection  = connection
+        self.open_files  = {}
         self.__busy      = True
         self.task        = None
         self.output_path = None
@@ -49,6 +52,7 @@ class Machine:
         Sheduler.removeMachine(self)
 
     def set_ready(self):
+        self.files    = [];
         self.abs_time = time.time() - self.abs_time
         if self.task: 
             self.task.finish()
@@ -58,9 +62,14 @@ class Machine:
         
 
 
-    def send_file(self, f_name):
+    def send_file(self, f_name, f_id = None):
+        data = bytes()
+        if(f_id): data += f_id
+
         with open(f_name, "rb") as f:
-            self.connection.send_binary(f.read())
+            data += f.read()
+
+        self.connection.send_binary(data)
         print("%s:%d: input file %s send" % (self.connection.address + (f_name,)))
 
 
@@ -108,8 +117,47 @@ class Machine:
                 #print("%s: ABSOLUTE time: %dms" %(self.connection.address[0], int(round(self.abs_time * 1000))))
 
             elif cmd == self.INPUT_FILE:
-                #print("%s: command input file: %s" % (self.connection.address[0], payload.decode()))
-                self.send_file(self.task.wf_path + "/" + payload.decode())
+                file_id = payload[:4];
+                f_path  = self.task.wf_path + "/" + payload[4:].decode()
+                self.send_file(f_path, file_id)
+
+            elif cmd == self.INPUT_OPEN:
+                fd       = int.from_bytes(payload[:4], byteorder='little') 
+                f_path   = self.task.wf_path + "/" + payload[4:].decode()
+
+                if os.path.isfile(f_path):
+                    if not f_path in self.open_files:
+                        self.open_files[f_path] = {'fd': None, 'file': None, 'size': os.stat(f_path).st_size}
+
+                    self.open_files[f_path]['fd']   = fd
+                    self.open_files[f_path]['file'] = open(f_path, "rb") 
+
+                    print("%s: command input file: %s" % (self.connection.address[0], f_path))
+                    time.sleep(1)
+                    response  = self.open_files[f_path]['size'].to_bytes(4, byteorder="little")
+
+                    self.connection.send_binary(response)
+                else:
+                    print("File not found: " + f_path)
+
+            elif cmd == self.INPUT_DATA:
+ 
+                filepointer = None
+                response    = bytes()
+                fd          = int.from_bytes(payload[:4], byteorder='little')
+                length      = int.from_bytes(payload[4:8], byteorder = 'little')
+                print('read bytes: ' + str(length)) 
+  
+                for obj in self.open_files.values():
+                    if obj['fd'] == fd:
+                        filepointer = obj['file']
+                        break
+ 
+                if filepointer:
+                    response = filepointer.read(length)
+                print("bytes send" + str(len(response)))      
+                self.connection.send_binary(response)
+
 
             elif cmd == self.OUTPUT_FILE:
                 #print("%s: command output file: %s" % (self.connection.address[0], payload[0:10]))
