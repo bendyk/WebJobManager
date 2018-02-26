@@ -1,12 +1,14 @@
-var Module        = {};
-var request_files = {};
-var cur_request   = {};
-var request_queue = [];
-var upload_queue  = [];
-var wf_path       = "";
-var task_id       = "";
-var std_out       = "#STDOUT\n";
-var std_err       = "#STDERR\n";
+var Module         = {};
+var request_files  = {};
+var upload_files   = [];
+var uploading_file = false;
+var cur_request    = {};
+var request_queue  = [];
+var upload_queue   = [];
+var wf_path        = "";
+var task_id        = "";
+var std_out        = "#STDOUT\n";
+var std_err        = "#STDERR\n";
 
 // timestamps:
 var ts_prerun_start = 0;
@@ -20,122 +22,12 @@ var duration_prerun = 0;
 var duration_mainrun = 0;
 var duration_postrun = 0;
 
-
-/*function pre___syscall145(which, varargs){
-
-  SYSCALLS.varargs = varargs;
-  var stream       = SYSCALLS.getStreamFromFD();
-  var iov          = SYSCALLS.get();
-  var iovcnt       = SYSCALLS.get();
-  var request_len  = 0;
-  var ret;
-
-
-  if(!("virtual" in stream.node)){
-    Module.printErr("reading from fs");
-    //ret = ___syscall145(which, varargs);
-  }
-  else{  
-    Module.printErr("reading from server");
-    if(stream.node.usedBytes >= stream.node.maxBytes) return 0;
-    ws.onmessage = function(msg){
-      var a = [];
-      for(var x in msg) a.push(x);
-      console.log(a);
-      Module.printErr("received from server");
-      //written = FS.write(stream, new Uint8Array(msg.data), 0, msg.data.byteLength, stream.node.usedBytes);
-      written = stream.stream_ops.write(stream, new Uint8Array(msg.data), 0, msg.data.byteLength, stream.node.usedBytes);
-      Module.printErr("written:" + msg.data.byteLength);
-      Module.printErr("position:" + stream.position);
-      Module.printErr("used_bytes:" + stream.node.usedBytes);
-      Module.printErr("max_bytes:" + stream.node.maxBytes);
-      //bytes_read = ___syscall145(which, varargs); 
-      setValue(___async_retval, msg.data.byteLength, 'i32');
-      Module.printErr('syscall! ' + [145, 'done']);
-      ws.onmessage = function(){return;};
-      Module["_emscripten_async_resume"]();
-    };
-
-
-    for(var x = 0; x < iovcnt; x++){ 
-      request_len += HEAP32[(((iov)+(x*8+4))>>2)];
-    }
-
-    request_len = (stream.position + request_len) - stream.node.usedBytes;
-    if(request_len < 1){
-      //ret = ___syscall145(which, varargs);
-    }
-    else{
-      sendbuf    = new Uint8Array(12);
-      sendbuf[3] = 14; ////'\u000e'
-
-      tmp    = new Uint32Array(sendbuf.buffer, 4);
-      tmp[0] = stream.node.id;
-      tmp[1] = request_len;
-
-      Module.printErr("request length: " + request_len);
-      Module.printErr(sendbuf.buffer.slice(3));
-      ws.send(sendbuf.buffer.slice(3));
-      Module.ccall("emscripten_sleep", null, ['number'], [10000]);
-      Module.printErr('syscall! ' + [145, 'pending...']);
-      ret = 1024;
-    }
-  }
-  //return(ret); 
+function trimPath(path){
+  path = path.replace(/\.\//g, "/");
+  path = path.replace(/\/{2,}/g , "/"); 
+  if(path[0] == "/") path = path.slice(1);
+  return path;
 }
-*/
-/*
-function pre___syscall5(which, varargs){
-  var fd           = -2;
-  SYSCALLS.varargs = varargs;
-  var file_path    = SYSCALLS.getStr();
-  var flags        = SYSCALLS.get();
-  var mode         = SYSCALLS.get();
-
-  if(!FS.analyzePath(file_path).exists){
-      //CREATE FILE OR LOAD FROM DB IF NOT EXISTS
-      if(FS.analyzePath(storage_path).exists){
-        var data = FS.readFile(storage_path, {encoding:'binary', flags:'r'});
-        FS.writeFile(file_path, new Uint8Array(data), {encoding:'binary'});
-        Module.printErr("load file from DB: " + file_path);
-      }
-      else{
-        new_node          = FS.createFile("/", file_path, {}, true, true);
-        new_node.virtual  = true;
-        new_node.maxBytes = 0;     
-      }
-  }
- 
-  var lookup = FS.lookupPath(file_path);
-
-  if('virtual' in lookup.node){
-    //READ FROM SERVER
-    Module.printErr("request file open from server: " + file_path);
-
-    ws.onmessage = function(msg){
-      lookup.node.maxBytes = new Uint32Array(msg.data)[0];
-
-      var new_fd = ___syscall5(which, varargs);
-      setValue(___async_retval, new_fd, 'i32');
-      Module.printErr('syscall! ' + [5, 'done']);
-      ws.onmessage = function(){return;};
-      Module["_emscripten_async_resume"]();
-    };
-    
-    tmp = new Uint32Array([lookup.node.id]);
-    ws.send('\u000d'+ String.fromCharCode(tmp[0], tmp[1], tmp[2], tmp[3]) + file_path);
-    Module.ccall("emscripten_sleep", null, ['number'], [10000]);
-    Module.printErr('syscall! ' + [5, 'pending...']);
-    fd = -2; 
-  }
-  else{
-    //READ LOCAL
-    Module.printErr("REEEEADLOCAL");
-    fd = ___syscall5(which, varargs);
-  }
-  
-  return(fd);
-}*/
 
 function pre___syscall5(which, varargs){
   var fd           = -2;
@@ -144,7 +36,10 @@ function pre___syscall5(which, varargs){
   var flags        = SYSCALLS.get();
   var mode         = SYSCALLS.get();
 
-  if(!FS.analyzePath(file_path).exists){
+  var files = Object.values(request_files);
+  for(var x = 0; x < files.length; x++){files[x] = trimPath(files[x])};
+
+  if(!FS.analyzePath(file_path).exists && (files.indexOf(trimPath(file_path)) >= 0)){
     var receive_interval = setInterval(function(){
       if(FS.analyzePath(file_path).exists){
         fd = ___syscall5(which, varargs);
@@ -157,7 +52,7 @@ function pre___syscall5(which, varargs){
         Module.printErr('waiting for file' + file_path);
         Module.printErr('syscall! ' + [5, 'pending...']);
       }
-    }, 2000);
+    }, 1);
     Module.ccall("emscripten_sleep", null, ['number'], [100000]);
     Module.printErr('syscall! ' + [5, 'pending...']);
     fd = -2;   
@@ -170,8 +65,35 @@ function pre___syscall5(which, varargs){
 }
 
 
+function pre___syscall6(which, varargs){
+  SYSCALLS.varargs = varargs;
+  var stream = SYSCALLS.getStreamFromFD();
+  var path   = stream.path;
+  var size   = stream.node.usedBytes;
+  var ret    = ___syscall6(which, varargs);
+  
+  ws.onmessage = function (msg){
+    store_or_send_file(path, msg);
+    uploading_file = false;
+    setValue(___async_retval, ret, 'i32');
+    Module["_emscripten_async_resume"]();
+  };
+
+  var files = upload_files.slice();
+  for(var x = 0; x < files.length; x++){files[x] = trimPath(files[x])};
+
+  if(files.indexOf(trimPath(path)) >= 0){
+    ws.send('\u0003' + path + ":" + size.toString()); 
+    uploading_file = true;
+    Module.ccall("emscripten_sleep", null, ['number'], [100000]);
+  }
+  return ret;
+}
+
+
 function load_binary(info, callback){
   info['env']['___syscall5'] = pre___syscall5;
+  info['env']['___syscall6'] = pre___syscall6;
 
   ws.onmessage = function(msg){
                    var data = new Uint8Array(msg.data);
@@ -245,7 +167,8 @@ function save_received_file(msg){
 }
 
 function send_request(id, file){
-  ws.send('\u0001' + String.fromCharCode(id[0], id[1], id[2], id[3]) + file); 
+  id_string = String.fromCharCode(id[0], id[1], id[2], id[3]);
+  ws.send('\u0001' + id_string + file); 
 }
 
 function receive_asyncload(msg){
@@ -296,7 +219,8 @@ function load_in_files(){
   var load_file;
   
   %(inputs)s
- 
+  %(outputs)s
+
   Module['addRunDependency']('indexed_DB');
 
   FS.mkdir("/storage");
@@ -344,13 +268,10 @@ function store_file(path, data){
   f_name       = tmp_path.slice(tmp_path.lastIndexOf("/") + 1);
   console.log("store file: " + tmp_path);
   
-  if(!FS.analyzePath(storage_path).exists){
-    FS.createPath("/", storage_path);
-  }
-
+  if(!FS.analyzePath(storage_path).exists) FS.createPath("/", storage_path);
+  
   FS.writeFile(storage_path + "/" + f_name, new Uint8Array(data), {encoding:'binary'}); 
 }
-
 
 function send_file(path, data){
   //send file to server
@@ -361,37 +282,17 @@ function send_file(path, data){
 }
 
 
-function upload_next_file(){
-  if(upload_queue.length == 0){
-    FS.syncfs(false, all_files_uploaded);
-  }
-  else{
-    cur_request = upload_queue.shift();
-    ws.onmessage = function (msg){
-                     var file;
-                     var tmp;
+function store_or_send_file(path, msg){
 
-                     if(FS.analyzePath(cur_request['file']).exists)
-                       file = FS.readFile(cur_request['file'], {encoding:'binary', flags:'r'});
-                     else
-                       file = new ArrayBuffer(1);
+    var buffer  = FS.readFile(path, {encoding:'binary', flags:'r'});
+    var op_code = String.fromCharCode((new Uint8Array(msg.data))[0]);
 
-                     tmp = new Uint8Array(msg.data);
-
-                     if(String.fromCharCode(tmp[0]) == '\u0009'){
-                       store_file(cur_request['file'], file);
-                       if((cur_request['file'] == "/std.err") | (cur_request['file'] == "/std.out")){
-                         send_file(cur_request['file'], file);
-                       }
-                     }
-                     else{
-                       send_file(cur_request['file'], file);
-                     }
-                     upload_next_file();
-                   };
-    size = 0;
-    ws.send('\u0003' + cur_request['file'] + ":" + size.toString());
-  } 
+    if(op_code == '\u0009'){
+      store_file(path, buffer);
+    }
+    else{
+      send_file(path, buffer);
+    }
 }
 
 
@@ -416,16 +317,39 @@ function all_files_uploaded(){
   request_executable();
 }
 
-function upload_out_files(){
 
-  if(Object.keys(request_files).length > 0){
-    setTimeout(upload_out_files, 500);
-    return;
-  } 
+function check_for_exit(){
+  if(Object.keys(request_files).length > 0 || uploading_file){
+    setTimeout(check_for_exit, 100);
+  }
+  else{
+    upload_std_and_finish();
+  }
+}
+
+
+function upload_std_and_finish(){
+  console.log("\nPOSTRUN...");
+  ws.onmessage = function(){};
+
+  var buf1 = new TextEncoder("utf-8").encode(std_out);
+  var buf2 = new TextEncoder("utf-8").encode(std_err);
+
+  ws.send('\u0003' + "/std.out" + ":" + buf1.length.toString());
+  store_file("/std.out", buf1);
+  send_file("/std.out", buf1);
+
+  ws.send('\u0003' + "/std.err" + ":" + buf2.length.toString());
+  store_file("/std.err", buf2);
+  send_file("/std.err", buf2);
+
+  finish();
+}
+
+function finish(){
 
   ts_mainrun_stop = Date.now();
 
-  console.log("\nPOSTRUN...");
 //  Module["noExitRuntime"] = true;
   if (typeof(setExecutionState) == "undefined")
     self.postMessage({"cmd": "setExecutionState", "arg": "TXT_EXEC_SEND"});
@@ -433,10 +357,7 @@ function upload_out_files(){
 	setExecutionState(TXT_EXEC_SEND);
 
   ts_postrun_start = Date.now();
-
-  %(outputs)s
- 
-  upload_next_file();
+  FS.syncfs(false, all_files_uploaded);
   return;
 }
 
@@ -449,6 +370,6 @@ function onAbort(){
 
 
 Module['preRun']          = load_in_files;
-Module['postRun']         = upload_out_files;
+Module['postRun']         = check_for_exit;
 Module['onAbort']         = onAbort;
 Module['instantiateWasm'] = load_binary;

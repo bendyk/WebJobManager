@@ -27,6 +27,7 @@ class Machine:
         self.connection  = connection
         self.open_files  = {}
         self.__busy      = True
+        self.__clean     = True
         self.task        = None
         self.output_path = None
         self.abs_time    = 0.0
@@ -37,6 +38,7 @@ class Machine:
         self.abs_time   = time.time()
         self.task       = task
         self.__busy     = True
+        self.__clean    = False
         self.task.start(self.connection)
         print("%s:%d: Task %s assigned" % (self.connection.address + (task.executable,)))
 
@@ -87,13 +89,16 @@ class Machine:
         transfer_file = Sheduler.check_file_transfer(self.task, self.output_path) 
 
         response = self.OUTPUT_SEND if transfer_file else self.OUTPUT_KEEP
-            
         self.connection.send_binary(response.to_bytes(1, byteorder='big'))
        
 
     def clean_workflow_files(self, wf_path):
         ##Cleaning indexeddb files 
-        self.__busy = True
+        if self.__clean:
+          return
+
+        self.__busy  = True
+        self.__clean = True
         print("cleaning %s on %s:%d" % ((wf_path,) + self.connection.address))
 
         with open("rm_workflow.js", "r") as f:

@@ -93,16 +93,8 @@ class Task:
 
     def __generate_js_output_files(self):
         data      = []
-     
-        data.append("  console.log(std_out);");
-        data.append("  console.log(std_err);");
-        data.append("  FS.writeFile(\"/std.out\", std_out, {encoding:'utf8'});");
-        data.append("  FS.writeFile(\"/std.err\", std_err, {encoding:'utf8'});");
-        data.append("  upload_queue.push({\"file\":\"./std.out\"});");
-        data.append("  upload_queue.push({\"file\":\"./std.err\"});");
-
         for f_path in self.out_files:
-          data.append("  upload_queue.push({\"file\": \"%s\"});" % f_path)
+          data.append("  upload_files.push(\"%s\");" % f_path)
 
         return "\n".join(data)
 

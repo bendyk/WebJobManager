@@ -39,6 +39,8 @@ function rmdirTree(path){
 }
 
 Module['preRun'] = function(){
+                     console.log("NEW JOB: clean indexedDB");
+		     console.log("RUNNING...");
                      Module['addRunDependency']("fileremove");
                      FS.mkdir("/storage");
                      FS.mount(IDBFS, {}, "/storage");
