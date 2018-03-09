@@ -84,9 +84,10 @@ class Task:
         for f_path in self.in_files:
             i += 1
             print("insert file: %s" % f_path);
-            data.append("request_files[%d] = \"%s\";" % (i, f_path))
-            if "/" in f_path:
-              data.append("  if(!FS.analyzePath(\"%s\").exists){FS.createPath(\"/\", \"%s\");}" % (f_path.rsplit("/",1)[0], f_path.rsplit("/",1)[0]))
+            data.append("request_files[%d] = {'origin':\"%s\",'f_path':\"%s\"};" % (i, f_path, f_path.split("/", 1)[-1]))
+            if f_path.count("/") > 1:
+                data.append("if(!FS.analyzePath(\"%s\").exists){FS.createPath(\"/\", \"%s\");}" % 
+                           (f_path.split("/", 1)[-1].rsplit("/",1)[0],)*2)
 
         return "\n".join(data)
       

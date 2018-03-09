@@ -29,6 +29,16 @@ function trimPath(path){
   return path;
 }
 
+function indexOfFile(file_path){
+  for(var id in request_files){
+    if(file_path == request_files[id]['f_path']){
+      return id;
+    }      
+  }
+  return -1;
+}
+
+//syscall open
 function pre___syscall5(which, varargs){
   var fd           = -2;
   SYSCALLS.varargs = varargs;
@@ -36,28 +46,25 @@ function pre___syscall5(which, varargs){
   var flags        = SYSCALLS.get();
   var mode         = SYSCALLS.get();
 
-  var files = Object.values(request_files);
-  for(var x = 0; x < files.length; x++){files[x] = trimPath(files[x])};
-
-  if(!FS.analyzePath(file_path).exists && (files.indexOf(trimPath(file_path)) >= 0)){
+  if(!FS.analyzePath(file_path).exists && (indexOfFile(trimPath(file_path)) >= 0)){
     var receive_interval = setInterval(function(){
       if(FS.analyzePath(file_path).exists){
         fd = ___syscall5(which, varargs);
         setValue(___async_retval, fd, 'i32');
-        Module.printErr('syscall! ' + [5, 'done']);
         clearInterval(receive_interval);
         Module["_emscripten_async_resume"]();
       }
       else{
-        Module.printErr('waiting for file' + file_path);
-        Module.printErr('syscall! ' + [5, 'pending...']);
+        console.log('waiting for file' + file_path + " ...");
       }
-    }, 1);
+      return 0;
+    }, 100);
     Module.ccall("emscripten_sleep", null, ['number'], [100000]);
-    Module.printErr('syscall! ' + [5, 'pending...']);
     fd = -2;   
   }
   else{
+    console.log("direct open: " + file_path);
+    console.log(request_files);
     fd = ___syscall5(which, varargs);
   }
 
@@ -65,6 +72,7 @@ function pre___syscall5(which, varargs){
 }
 
 
+//syscall close
 function pre___syscall6(which, varargs){
   SYSCALLS.varargs = varargs;
   var stream = SYSCALLS.getStreamFromFD();
@@ -121,12 +129,12 @@ function load_binary(info, callback){
 
 function load_from_indexedDB(file){
   var success      = false;
-  var storage_path = "/storage/" + wf_path + "/" + file;
+  var storage_path = "/storage/" + wf_path + "/" + file['origin'];
 
   if(FS.analyzePath(storage_path).exists){
-    console.log("Load file from DB: " + file);
+    console.log("Load file from DB: " + file['origin']);
     var data = FS.readFile(storage_path, {encoding:'binary', flags:'r'});
-    FS.writeFile(file, new Uint8Array(data), {encoding:'binary'}); 
+    FS.writeFile(file['f_path'], new Uint8Array(data), {encoding:'binary'}); 
     success = true;
   }
 
@@ -159,16 +167,16 @@ function preRun_finished() {
 
 function save_received_file(msg){
   var id   = new Uint32Array(msg.data.slice(0,4))[0];
-  var path = request_files[id];
+  var path = request_files[id]['f_path'];
   FS.writeFile(path, new Uint8Array(msg.data, 4), {encoding: 'binary'}); 
   console.log("received file: " + path);
   delete request_files[id];
   return id;
 }
 
-function send_request(id, file){
+function send_request(id, file_path){
   id_string = String.fromCharCode(id[0], id[1], id[2], id[3]);
-  ws.send('\u0001' + id_string + file); 
+  ws.send('\u0001' + id_string + file_path); 
 }
 
 function receive_asyncload(msg){
@@ -181,16 +189,16 @@ function receive_preload(msg){
 }
 
 function asyncload_file(id, file){
-  console.log("load file async: " + file);
-  send_request(new Uint32Array([id]), file);
+  console.log("load file async: " + file['f_path']);
+  send_request(new Uint32Array([id]), file['origin']);
 }
 
 function preload_file(id, file){
-  console.log("preload file: " + file);
+  console.log("preload file: " + file['f_path']);
   var new_id = getUniqueRunDependency(id);
   delete request_files[id];
   request_files[new_id] = file;
-  send_request(new Uint32Array([new_id]), file);
+  send_request(new Uint32Array([new_id]), file['origin']);
   Module['addRunDependency'](new_id);
 }
 

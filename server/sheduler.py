@@ -71,6 +71,7 @@ class Sheduler:
               machine.clean_workflow_files(wf.wf_path)
             else:
               print("machine is busy")
+      time.sleep(0.1)
 
     tasks = Sheduler.workflows[0].get_all_tasks()
     print("all tasks done.")
