@@ -212,7 +212,7 @@ function load_in_files(){
 
   ts_prerun_start = Date.now();
 
-  /*FS.init(input = function(){
+  FS.init(input = function(){
             return null;
           },
           output = function(msg){
@@ -221,7 +221,7 @@ function load_in_files(){
           error  = function(msg){
             std_err = std_err.concat(String.fromCharCode(msg));
           }
-  );*/
+  );
 
   var receive_file; 
   var load_file;

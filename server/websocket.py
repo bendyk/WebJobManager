@@ -5,6 +5,14 @@ import threading
 import hashlib
 import base64
 import binascii
+from .logging import Debug
+
+WEBSOCKET_HANDSHAKE = '\
+HTTP/1.1 101 Web Socket Protocol Handshake\r\n\
+Upgrade: websocket\r\n\
+Connection: Upgrade\r\n\
+Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
+'
 
 class WSServer(threading.Thread):
     
@@ -19,7 +27,7 @@ class WSServer(threading.Thread):
 
 
     def run(self):
-        print("Running WebSocketServer on port %d" % self.addr[1])
+        print("WebSocketServer running on port %d" % self.addr[1])
         self.sock.bind(self.addr)
         self.sock.listen(10)
         
@@ -30,7 +38,7 @@ class WSServer(threading.Thread):
                     self.__connections[address] = WSConnection(client, address)
                     self.onConnection(self.__connections[address])
                 else:
-                    print("Connection ERROR: Multiple connections from same address")
+                    Debug.error(DEBUG.ERROR.CONNECTION_REFUSED, address)
         except OSError:
             pass
 
@@ -40,6 +48,7 @@ class WSServer(threading.Thread):
 
 
     def shutdown(self):
+        Debug.log("shutdown..." , ("Server", 0))
         for con in list(self.__connections.values()):
             con.shutdown()
         self.sock.shutdown(socket.SHUT_RDWR)
@@ -58,14 +67,6 @@ class WSServer(threading.Thread):
 
 class WSConnection(threading.Thread):
 
-
-    template_handshake = '\
-HTTP/1.1 101 Web Socket Protocol Handshake\r\n\
-Upgrade: websocket\r\n\
-Connection: Upgrade\r\n\
-Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
-'
-
     BINARY        = 0
     TEXT          = 1
     MAX_FRAG_SIZE = 2**63-1
@@ -73,8 +74,8 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
 
 
     def __init__(self, client, address):
+        Debug.log("New Connection request", address)
         threading.Thread.__init__(self)
-        print("WSConnection request from %s:%d" % address)
         self.connection = client
         self.address    = address
         self.listener   = None
@@ -102,8 +103,10 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
                 if "WebSocket-Key" in line:
                     accept     = self.hash_key(line.split(":")[1])
                     handshaken = True
-                    msg = self.template_handshake % {"hash": accept}
+                    msg = WEBSOCKET_HANDSHAKE % {"hash": accept}
                     self.connection.send(msg.encode())
+
+        Debug.log("Connection established", self.address)
 
 
     def hash_key(self, key):
@@ -146,8 +149,10 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
             last += data
 
             self.connection.send(last)
+            Debug.log("%d bytes send" % len(data), self.address)
 
         except IOError:
+            Debug.warn("failed to send data", self.address)
             self.shutdown()
 
 
@@ -155,7 +160,7 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
         recv = self.connection.recv(1)
 
         if (len(recv) == 0):
-            print("Websocket: received empty message.")
+            Debug.log("received empty message", self.address)
             return
 
         fin      = recv[0] >> 7
@@ -165,12 +170,8 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
             self.recv_data(fin)
         elif op_code == 8:
             self.shutdown()
-        #elif op_code == 9: # functionality not used yet
-        #    self.recv_ping()
-        #elif op_code == 10:
-        #    self.recv_pong()
         else:
-            print('WSConnection: Not supported op_code: %d' % op_code)
+            Debug.warn("Not supported op_code", self.address)
 
 
     def recv_data(self, fin):
@@ -186,14 +187,13 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
         mask       = self.connection.recv(4) * 256
         remaining  = bytelength
 
-        #print("received: rawlength: %d, bytelength: %d" % (rawlength, bytelength) )
-
         while remaining > 0:
             read_bytes = 1024 if remaining > 1024 else remaining 
             recv = self.connection.recv(read_bytes)
             data.extend(bytearray(mask[pos] ^ value for pos,value in enumerate(recv)))
             remaining -= len(recv)
 
+        Debug.log("%d bytes received" % bytelength, self.address)
         self.listener(data)
 
 
@@ -217,11 +217,11 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
         self.__onClose = onClose
 
     def recv_ping(self):
-        print("WSConnection: Ping received")
+        Debug.log("Ping received", self.address)
 
 
     def recv_pong(self):
-        print("WSConnection: Pong received")
+        Debug.log("Pong received", self.address)
 
 
     def shutdown(self):
@@ -234,6 +234,6 @@ Sec-WebSocket-Accept: %(hash)s\r\n\r\n\
                 pass
 
             self.closed = True
-            print("Connection to: %s:%d closed" % self.address)
+            Debug.warn("Connection closed", self.address)
 
 

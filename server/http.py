@@ -6,7 +6,7 @@ import time
 from http.server import BaseHTTPRequestHandler
 from .sheduler import Sheduler
 from .workflow import Workflow
-
+from .logging import Debug
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -24,38 +24,45 @@ class RequestHandler(BaseHTTPRequestHandler):
         s.end_headers()
 
         if len(s.path) > 1:
-            print("GET for file %s received" % s.path)
+
+            Debug.log("GET request %s" % s.path)
             filepath = "./" + "/".join(s.path.split('/')[1:])
+
             # first check if file exists
             if os.path.isfile(filepath):
                 with open(filepath, "rb") as f:
                     s.wfile.write(f.read())
-                print("File %s send" % filepath)
+                Debug.log("GET response %s" % filepath)
             else:
                 s.send_error(404, "File not found")
+
         else: 
+            Debug.log("GET request index.html")
             with open("index.html", "r") as f:
                 s.wfile.write(bytes(f.read(), "utf-8"))
-            #s.wfile.write(bytes(s.main_html, "utf-8"))
+
 
     def do_POST(s):
         content_length = int(s.headers['Content-Length'])
         file_content   = s.rfile.read(content_length)
         boundary       = s.headers['Content-Type'].split("boundary=")[-1].encode()
+  
+        files = s.save_files(file_content, boundary)
 
         workflow = None
         try:
-            workflow = s.create_workflow(file_content, boundary)
+            workflow = Workflow(files, "workflow.cwl", "workflow.json")
         except:
             workflow = None
             pass
         
         response_file = ""
         if workflow:
-            Sheduler.addWorkflow(workflow)
             response_file = "manage_success.html"
+            Debug.msg("New Workflow created", s.client_address)
         else:
             response_file = "manage_fail.html"
+            Debug.warn("Failed to create new workflow", s.client_address)
 
         with open(response_file, "rb") as f:
             s.send_response(200)
@@ -64,16 +71,14 @@ class RequestHandler(BaseHTTPRequestHandler):
             s.wfile.write(f.read())
 
 
-    def create_workflow(s, data, boundary):
-        files  = {}
+    def save_files(s, data, boundary):
+        files = []
         regex  = re.compile(b'.*\n.* name="(.*)".*filename="(.*)"\r\n.*', re.DOTALL)
         chunks = data.split(boundary)
-
-        wf_path = "./workflows/%d" % int(round(time.time() * 1000))
-
-        if not os.path.exists(wf_path):
-            os.makedirs(wf_path)
-       
+  
+        tmp_path = "/tmp/%d" % int(round(time.time() * 1000))
+        os.makedirs(tmp_path)
+        
         for chunk in chunks:
             filepointer = chunk.find(b'\r\n\r\n')
             meta_data   = chunk[0:filepointer]
@@ -85,20 +90,16 @@ class RequestHandler(BaseHTTPRequestHandler):
                     f_id   = matcher.group(1).decode()
                     f_name = matcher.group(2).decode()
 
-                    with open(wf_path + "/" + f_name, "wb") as f:
+                    if f_id in ["workflow.cwl", "workflow.json"]:
+                        f_name = f_id
+
+                    with open(tmp_path + "/" + f_name, "wb") as f:
                         f.write(file_data)
 
-                    files[f_id] = f_name
-                    print("Files received: %s -> %s" %(f_id, f_name))
-
-        data_file = wf_path + "/" + files["workflow.json"] if "workflow.json" in files else ""
-    
-        wf = Workflow(wf_path, wf_path + "/" + files["workflow.cwl"], data_file)
+                    files.append(tmp_path + "/" + f_name)
+                    Debug.log("Files received: %s -> %s" %(f_id, f_name), s.client_address)
+        return files
         
-        if files["workflow.cwl"] and wf.check_required_files():
-            return wf
-        else: 
-            for f in files.values(): os.remove(wf_path + "/" + f)
-            return None
+        
 
 

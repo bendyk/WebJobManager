@@ -1,10 +1,27 @@
 from util.cwl_parser import Parser
 from server.task import Task
+from server.sheduler import Sheduler
 import re
 import os
+import time
+import shutil
 
 class Workflow:
-  def __init__(self, workflow_path, workflow_file, data_file=""):
+
+  def __init__(self, files, workflow_file, data_file=""):
+
+    wf_path = self.new_working_dir()
+    self.copy_wf_files(wf_path, files, workflow_file, data_file)
+
+    self.create(wf_path, wf_path + "/" + workflow_file.rsplit("/", 1)[-1], wf_path + "/" + data_file.rsplit("/", 1)[-1])
+
+    if self.check_required_files():
+      Sheduler.addWorkflow(self) 
+    else:
+      return None
+      
+
+  def create(self, workflow_path, workflow_file, data_file=""):
     self.__steps           = {}
     self.__tasks           = {}
     self.__clts            = {}
@@ -26,6 +43,21 @@ class Workflow:
       #if you didnt specified a workflow_file you've to set the tasks manually with set_tasks() 
       #(used for depricated workflow input syntax)
       pass
+
+
+  def copy_wf_files(self, wf_path, files_path, wf_file, data_file):
+
+    for f in files_path:
+        shutil.copyfile(f, wf_path + "/" + f.rsplit("/", 1)[-1])
+
+
+  def new_working_dir(self):
+    wf_path = "./workflows/%d" % int(round(time.time() * 1000))
+
+    if not os.path.exists(wf_path):
+      os.makedirs(wf_path)
+    
+    return wf_path
 
 
   def __load_ext_inputs(self, wf_object, data_object=None):

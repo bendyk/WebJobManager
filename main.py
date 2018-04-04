@@ -38,9 +38,9 @@ def parse_args():
 
     parser = OptionParser(usage="%prog [-p workflow_dir -w cwl_workflow_file [-d cwl_data_file]]")
 
-    parser.add_option("-p", "--path", dest="wf_path", action="store",
+    parser.add_option("-p", "--path", dest="wf_files", action="store",
                       type="string", default="", 
-                      help="root path of the workflow. all filepaths have to be relative to this path.")
+                      help="path to the workflow files.")
 
     parser.add_option("-w", "--workflow", dest="wf_file", action="store", 
                       type="string", default="", 
@@ -64,7 +64,7 @@ def parse_args():
 
     (options, args) = parser.parse_args()
 
-    if bool(options.wf_file) != bool(options.wf_path):
+    if bool(options.wf_file) != bool(options.wf_files):
         print("workflow directory(-p) and workflow file(-w) required")
         exit(-1)
 
@@ -74,15 +74,17 @@ def parse_args():
 def run(opts):
     Sheduler.MINIMUM_MACHINES = opts.minimum_machines
     if opts.wf_file and os.path.isfile(opts.wf_file):
-        wf = Workflow(opts.wf_path, opts.wf_file, opts.data_file)
+        wf_files = []
+
+        for f in os.listdir(opts.wf_files):
+            wf_files.append(os.path.join(opts.wf_files, f))
+
+        wf = Workflow(wf_files, opts.wf_file, opts.data_file)
         
-        if wf.check_required_files():
-            Sheduler.addWorkflow(wf)
-        else:
+        if not wf:
             print("Missing files in workflow")
             exit()
         
-
     try:
         wsd = WSServer(("", opts.ws_port), on_newConnection)
         wsd.start()
@@ -114,7 +116,8 @@ def run(opts):
 
 def on_newConnection(connection):
     Sheduler.addMachine(Machine(connection))
-
+    
 
 if __name__ == "__main__": 
     run(parse_args())
+

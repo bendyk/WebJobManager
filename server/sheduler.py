@@ -1,4 +1,5 @@
 import time
+from server.logging import Debug
 
 class Sheduler:
 
@@ -23,14 +24,14 @@ class Sheduler:
   @staticmethod
   def wait_min_machines():
     if Sheduler.MINIMUM_MACHINES > 1:
-      print("Will wait until %d machines are connected" % Sheduler.MINIMUM_MACHINES)
+      Debug.msg("Waiting for %d connected worker" % Sheduler.MINIMUM_MACHINES, ("SHEDULER", 1))
 
     wait_for_machines = True
     while wait_for_machines: # wait until enough machines are connected
       count_connected = Sheduler.count_machines()
       if count_connected >= Sheduler.MINIMUM_MACHINES:
         wait_for_machines = False
-        print("%d machines are ready." % count_connected)
+        Debug.msg("%d machines available" % count_connected, ("SHEDULER", 1))
       else:
         time.sleep(1)
 
@@ -70,11 +71,12 @@ class Sheduler:
             if not machine.is_busy():
               machine.clean_workflow_files(wf.wf_path)
             else:
+              Debug.log("machine is busy", ("SHEDULER", 1))
               print("machine is busy")
       time.sleep(0.1)
 
     tasks = Sheduler.workflows[0].get_all_tasks()
-    print("all tasks done.")
+    Debug.msg("all TASKS done", ("SHEDULER",1))
     Statistics.save_time_stats("task_times.stats", tasks, workflow_start_time)
 
 

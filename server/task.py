@@ -70,12 +70,8 @@ class Task:
         data = []
         data.append("  wf_path = \"%s\";" % self.wf_path)
         data.append("  task_id = \"%s\";" % self.identifier)
-        ##TODO check which methods to use for file loading(preload, async load)
-        #data.append("  receive_file = receive_asyncload;") 
-        #data.append("  load_file    = asyncload_file;") 
         data.append("  receive_file = receive_asyncload;") 
         data.append("  load_file    = asyncload_file;") 
-        ###
         data.append("  FS.createPath(\"/\", wf_path);")
         data.append("  FS.createLink(wf_path, task_id, \"/\");")
         data.append("  console.log(wf_path);")
@@ -83,7 +79,6 @@ class Task:
         i = 0;
         for f_path in self.in_files:
             i += 1
-            print("insert file: %s" % f_path);
             data.append("request_files[%d] = {'origin':\"%s\",'f_path':\"%s\"};" % (i, f_path, f_path.split("/", 1)[-1]))
             if f_path.count("/") > 1:
                 data.append("if(!FS.analyzePath(\"%s\").exists){FS.createPath(\"/\", \"%s\");}" % 
