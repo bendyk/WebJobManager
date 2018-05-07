@@ -70,6 +70,10 @@ class Machine:
         data = bytes()
         if(f_id): data += f_id
 
+        if not os.path.exists(f_name):
+            Debug.warn("File not found %s" % f_name, self.connection.address)
+            return
+
         with open(f_name, "rb") as f:
             data += f.read()
 

@@ -1,6 +1,7 @@
 import time
+import os
 import glob
-
+from server.logging import Debug
 class Task:
 
     def __init__(self, js_executable, args=None, wf_path="./", identifier=""):
@@ -70,8 +71,6 @@ class Task:
         data = []
         data.append("  wf_path = \"%s\";" % self.wf_path)
         data.append("  task_id = \"%s\";" % self.identifier)
-        data.append("  receive_file = receive_asyncload;") 
-        data.append("  load_file    = asyncload_file;") 
         data.append("  FS.createPath(\"/\", wf_path);")
         data.append("  FS.createLink(wf_path, task_id, \"/\");")
         data.append("  console.log(wf_path);")
@@ -107,6 +106,13 @@ class Task:
 
 
     def __append_exe(self, data):
+        if not os.path.exists(self.executable):
+            if os.path.exists(self.executable + ".js"):
+                self.executable += ".js"
+            else:
+                Debug.error("JS Executable %s not Found" % self.executable)
+                return
+
         data.append("Module['thisProgram']=\"%s\";" % self.executable) 
 
         with open(self.executable, "r") as f:

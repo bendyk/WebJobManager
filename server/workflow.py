@@ -1,6 +1,7 @@
 from util.cwl_parser import Parser
 from server.task import Task
 from server.sheduler import Sheduler
+from server.logging import Debug
 import re
 import os
 import time
@@ -18,7 +19,10 @@ class Workflow:
     if self.check_required_files():
       Sheduler.addWorkflow(self) 
     else:
-      return None
+      raise IOError("Files Missing")
+
+    print("steps:")
+    print(self.__steps)
       
 
   def create(self, workflow_path, workflow_file, data_file=""):
@@ -126,10 +130,12 @@ class Workflow:
 
 
   def check_required_files(self):
+    ret_val = True
     for inp in self.__external_inputs.values():
       if (inp.cwl_type == "File") and not (os.path.isfile("%s/%s" % (self.wf_path, inp.value))):
-        return False
-    return True
+        Debug.warn("%s/%s Missing" % (self.wf_path, inp.value))
+        ret_val = False
+    return ret_val
 
 
   def remaining_tasks(self):

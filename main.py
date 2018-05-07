@@ -77,10 +77,16 @@ def run(opts):
         wf_files = []
 
         for f in os.listdir(opts.wf_files):
-            wf_files.append(os.path.join(opts.wf_files, f))
+            path = os.path.join(opts.wf_files, f)
+            if os.path.isfile(path):
+                wf_files.append(path)
 
-        wf = Workflow(wf_files, opts.wf_file, opts.data_file)
-        
+        try:
+            wf = Workflow(wf_files, opts.wf_file, opts.data_file)
+        except IOError:
+            wf = None
+            pass
+
         if not wf:
             print("Missing files in workflow")
             exit()

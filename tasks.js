@@ -79,18 +79,21 @@ function pre___syscall6(which, varargs){
   var path   = stream.path;
   var size   = stream.node.usedBytes;
   var ret    = ___syscall6(which, varargs);
+
+
+  var files = upload_files.slice();
+  for(var x = 0; x < files.length; x++){files[x] = trimPath(files[x])};
+  var index = files.indexOf(trimPath(path));
   
   ws.onmessage = function (msg){
     store_or_send_file(path, msg);
+    upload_files.splice(index, 1);
     uploading_file = false;
     setValue(___async_retval, ret, 'i32');
     Module["_emscripten_async_resume"]();
   };
 
-  var files = upload_files.slice();
-  for(var x = 0; x < files.length; x++){files[x] = trimPath(files[x])};
-
-  if(files.indexOf(trimPath(path)) >= 0){
+  if(index >= 0){
     ws.send('\u0003' + path + ":" + size.toString()); 
     uploading_file = true;
     Module.ccall("emscripten_sleep", null, ['number'], [100000]);
@@ -100,8 +103,11 @@ function pre___syscall6(which, varargs){
 
 
 function load_binary(info, callback){
-  info['env']['___syscall5'] = pre___syscall5;
-  info['env']['___syscall6'] = pre___syscall6;
+  
+  if(typeof(_emscripten_sleep) == "function"){
+      info['env']['___syscall5'] = pre___syscall5;
+      info['env']['___syscall6'] = pre___syscall6;
+  }
 
   ws.onmessage = function(msg){
                    var data = new Uint8Array(msg.data);
@@ -223,8 +229,8 @@ function load_in_files(){
           }
   );
 
-  var receive_file; 
-  var load_file;
+  var receive_file = typeof(_emscripten_sleep) == "function" ? receive_asyncload : receive_preload; 
+  var load_file    = typeof(_emscripten_sleep) == "function" ? asyncload_file    : preload_file;
   
   %(inputs)s
   %(outputs)s
@@ -292,14 +298,20 @@ function send_file(path, data){
 
 function store_or_send_file(path, msg){
 
-    var buffer  = FS.readFile(path, {encoding:'binary', flags:'r'});
-    var op_code = String.fromCharCode((new Uint8Array(msg.data))[0]);
+    try{
+      var buffer  = FS.readFile(path, {encoding:'binary', flags:'r'});    
+      var op_code = String.fromCharCode((new Uint8Array(msg.data))[0]);
 
-    if(op_code == '\u0009'){
-      store_file(path, buffer);
+      if(op_code == '\u0009'){
+        store_file(path, buffer);
+      }
+      else{
+        send_file(path, buffer);
+      }
     }
-    else{
-      send_file(path, buffer);
+    catch(error){
+      console.log("WARNING: "+ path +" not found");
+      console.log(FS.readdir("/"));
     }
 }
 
@@ -327,7 +339,7 @@ function all_files_uploaded(){
 
 
 function check_for_exit(){
-  if(Object.keys(request_files).length > 0 || uploading_file){
+  if(uploading_file){
     setTimeout(check_for_exit, 100);
   }
   else{
@@ -354,6 +366,30 @@ function upload_std_and_finish(){
   finish();
 }
 
+function upload_run(){
+  if(upload_files.length > 0){    
+    uploading_file = true;
+    f = upload_files.shift();
+    ws.send('\u0003' + f + ":1"); // maybe change this to actual filesize
+
+    ws.onmessage = function(msg){
+      store_or_send_file(f, msg);
+      uploading_file = false;
+      upload_run();
+    }        
+  }
+}
+
+function post_run(){
+  if(Object.keys(request_files).length > 0){
+    setTimeout(post_run, 100);
+  }
+  else{
+    upload_run();
+    check_for_exit();
+  }
+}
+
 function finish(){
 
   ts_mainrun_stop = Date.now();
@@ -378,6 +414,6 @@ function onAbort(){
 
 
 Module['preRun']          = load_in_files;
-Module['postRun']         = check_for_exit;
+Module['postRun']         = post_run;
 Module['onAbort']         = onAbort;
 Module['instantiateWasm'] = load_binary;

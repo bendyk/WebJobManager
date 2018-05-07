@@ -51,6 +51,7 @@ class Sheduler:
     workflow_start_time = 0
     alltasksdone = False
 
+    print(Sheduler.workflows)
     while True:
       alltasksdone = True
       for wf in Sheduler.workflows:
