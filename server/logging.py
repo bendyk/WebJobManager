@@ -23,3 +23,12 @@ class Debug:
   def msg(msg, address=("", 0)):
     pre_msg = "%s|%d MESSAGE: " % address
     print(pre_msg + msg)
+
+
+  def log_file(fname, content):
+    with open(fname, "w") as f:
+
+      if not type(content) is str:
+        content = "\n".join(content)
+
+      f.write(content)

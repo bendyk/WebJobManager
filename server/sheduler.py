@@ -47,6 +47,7 @@ class Sheduler:
 
   @staticmethod
   def run():
+    log_file = open("./workflow.log", "w")
     Sheduler.wait_min_machines()
     workflow_start_time = 0
     alltasksdone = False
@@ -59,9 +60,15 @@ class Sheduler:
           alltasksdone = False
           task         = wf.get_free_task()
           if task:
-            if workflow_start_time == 0:
-              workflow_start_time = time.time()
+            if wf.START_TIME == 0:
+              wf.START_TIME = time.time()
+            log_file.write(task.path + " executed\n")
             Sheduler.execute_task(task)
+        else:
+          tasks = wf.get_all_tasks()
+          log_file.close()
+          Debug.msg("WORKFLOW %s DONE" % wf.wf_path, ("SHEDULER",1))
+          Statistics.save_time_stats("%s/task_times.stats" % wf.wf_path, tasks, wf.START_TIME, time.time())
           
         time.sleep(1)
 
@@ -90,8 +97,9 @@ class Sheduler:
           machine.run_task(task)
           started = True
           break
-
-      time.sleep(1)
+      if started:
+        break
+      time.sleep(0.5)
 
 
   @staticmethod

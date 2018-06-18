@@ -1,8 +1,8 @@
 class Statistics:
 
   @staticmethod
-  def save_time_stats(f_name, done_tasks, workflow_start):
-    lines    = []
+  def save_time_stats(f_name, done_tasks, workflow_start, workflow_end=0):
+    lines        = []
 
     sums = { "mngr": 0, "mngr_sq": 0, "pre": 0, "pre_sq": 0, "main": 0, "main_sq": 0, "post": 0, "post_sq": 0, "worker": 0, "worker_sq": 0 }
     mins = { "mngr": 0xFFFFFFFF, "pre": 0xFFFFFFFF, "main": 0xFFFFFFFF, "post": 0xFFFFFFFF, "worker": 0xFFFFFFFF }
@@ -122,6 +122,8 @@ class Statistics:
 
 
       # calculate total workflow runtime
+      if workflow_end != 0:
+          last_task_stop = workflow_end
       runtime = int(round((last_task_stop - workflow_start) * 1000))
       lines.append("workflow runtime;;; " + str(runtime))
 

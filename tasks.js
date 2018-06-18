@@ -172,7 +172,10 @@ function preRun_finished() {
 
 
 function save_received_file(msg){
-  var id   = new Uint32Array(msg.data.slice(0,4))[0];
+  var tmp = new Uint8Array(msg.data.slice(0,4));
+  var id  = parseInt(String.fromCharCode(tmp[0]) + String.fromCharCode(tmp[1]) + 
+                     String.fromCharCode(tmp[2]) + String.fromCharCode(tmp[3]));
+
   var path = request_files[id]['f_path'];
   FS.writeFile(path, new Uint8Array(msg.data, 4), {encoding: 'binary'}); 
   console.log("received file: " + path);
@@ -181,7 +184,9 @@ function save_received_file(msg){
 }
 
 function send_request(id, file_path){
-  id_string = String.fromCharCode(id[0], id[1], id[2], id[3]);
+
+  id_string = id.toString(16);
+  id_string = "0".repeat(4 - id_string.length) + id_string
   ws.send('\u0001' + id_string + file_path); 
 }
 
@@ -196,7 +201,7 @@ function receive_preload(msg){
 
 function asyncload_file(id, file){
   console.log("load file async: " + file['f_path']);
-  send_request(new Uint32Array([id]), file['origin']);
+  send_request(id, file['origin']);
 }
 
 function preload_file(id, file){
@@ -204,7 +209,7 @@ function preload_file(id, file){
   var new_id = getUniqueRunDependency(id);
   delete request_files[id];
   request_files[new_id] = file;
-  send_request(new Uint32Array([new_id]), file['origin']);
+  send_request(new_id, file['origin']);
   Module['addRunDependency'](new_id);
 }
 
@@ -234,6 +239,7 @@ function load_in_files(){
   
   %(inputs)s
   %(outputs)s
+  console.log(request_files);
 
   Module['addRunDependency']('indexed_DB');
 

@@ -49,18 +49,19 @@ class Machine:
     def connection_closed(self):
         if self.task:
             Debug.warn("task abort" , self.connection.address)
-            self.task.in_execution = False
             self.task.done         = False
+            self.task.in_execution = False
             self.task              = None
         Sheduler.removeMachine(self)
 
 
     def set_ready(self):
-        self.files    = [];
+        self.files    = []
         self.abs_time = time.time() - self.abs_time
         if self.task: 
             Debug.log("task finished", self.connection.address)
-            self.task.finish()
+            if not self.connection.closed:
+                self.task.finish()
         self.__busy = False
         self.task   = None
         Debug.log("waiting for new task", self.connection.address)
@@ -110,7 +111,10 @@ class Machine:
 
     def process_file_request(self, data):
         file_id = data[:4];
+        print("process file: %d,%d,%d,%d" % (file_id[0],file_id[1],file_id[2],file_id[3]))
         f_path  = self.task.wf_path + "/" + data[4:].decode()
+        Debug.log("requested file %s" % f_path, self.connection.address)
+        f_path  = f_path.replace("\0", "")
         self.send_file(f_path, file_id)
        
 

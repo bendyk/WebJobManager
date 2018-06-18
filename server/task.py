@@ -43,7 +43,7 @@ class Task:
         for task in self.dependencies:
             if not task.done:
                 return False
-        return not self.in_execution
+        return (not self.in_execution and not self.done)
 
 
     def start(self, connection):

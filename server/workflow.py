@@ -8,21 +8,20 @@ import time
 import shutil
 
 class Workflow:
+  START_TIME = 0
 
-  def __init__(self, files, workflow_file, data_file=""):
+  def __init__(self, files, workflow_file, data_file="", wf_path=""):
 
-    wf_path = self.new_working_dir()
-    self.copy_wf_files(wf_path, files, workflow_file, data_file)
+    if not wf_path or not os.path.exists(wf_path):
+      wf_path = self.new_working_dir()
 
-    self.create(wf_path, wf_path + "/" + workflow_file.rsplit("/", 1)[-1], wf_path + "/" + data_file.rsplit("/", 1)[-1])
+    self.copy_wf_files(wf_path, files)
 
-    if self.check_required_files():
-      Sheduler.addWorkflow(self) 
-    else:
+    self.create(wf_path, wf_path + "/" + workflow_file.rsplit("/", 1)[-1], 
+                wf_path + "/" + data_file.rsplit("/", 1)[-1])
+ 
+    if not self.check_required_files():
       raise IOError("Files Missing")
-
-    print("steps:")
-    print(self.__steps)
       
 
   def create(self, workflow_path, workflow_file, data_file=""):
@@ -49,7 +48,27 @@ class Workflow:
       pass
 
 
-  def copy_wf_files(self, wf_path, files_path, wf_file, data_file):
+  def recover(self):
+      count = 0
+
+      for task in self.__tasks:
+
+          if os.path.exists(task.path):
+              task.done = True
+              files     = os.listdir(task.path)
+              for out_file in task.out_files:
+                  if not out_file in files:
+                      task.done = False
+
+              if not ("std.out" and "std.err" in files):
+                  task.done = False
+
+              count += task.done
+
+      Debug.log("%d of %d tasks recovered" % (count, len(self.__tasks)))
+
+
+  def copy_wf_files(self, wf_path, files_path):
 
     for f in files_path:
         shutil.copyfile(f, wf_path + "/" + f.rsplit("/", 1)[-1])
@@ -148,7 +167,7 @@ class Workflow:
 
   def get_free_task(self):
     for task in self.__tasks:
-      if task.ready() and not task.done:
+      if task.ready():
         return task
     return None
 

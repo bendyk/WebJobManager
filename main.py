@@ -14,6 +14,7 @@ from server.machine import Machine
 from server.task import Task
 from server.workflow import Workflow
 from server.sheduler import Sheduler
+from server.logging import Debug
 
 from util.statistics import Statistics
 
@@ -44,11 +45,11 @@ def parse_args():
 
     parser.add_option("-w", "--workflow", dest="wf_file", action="store", 
                       type="string", default="", 
-                      help="absolute path to the cwl_workflow file.")
+                      help="path to the cwl_workflow file.")
  
     parser.add_option("-d", "--data", dest="data_file", action="store", 
                       type="string", default="", 
-                      help="absolute path to an optional datafile for the workflow")
+                      help="path to an optional datafile for the workflow")
 
     parser.add_option("--http-port", dest="http_port", action="store",
                       type="int", default = 8888, 
@@ -62,6 +63,11 @@ def parse_args():
                       type="int", default = 1, 
                       help="Minimum of machines to start workflow")
 
+    parser.add_option("-r", "--recover", dest="recovery_path", action="store",
+                      type="string", default="",
+                      help="path to the workflow you want to recover")
+
+
     (options, args) = parser.parse_args()
 
     if bool(options.wf_file) != bool(options.wf_files):
@@ -73,51 +79,77 @@ def parse_args():
 
 def run(opts):
     Sheduler.MINIMUM_MACHINES = opts.minimum_machines
+
     if opts.wf_file and os.path.isfile(opts.wf_file):
-        wf_files = []
+        wf = parse_workflow(opts)
+        Sheduler.addWorkflow(wf)       
 
-        for f in os.listdir(opts.wf_files):
-            path = os.path.join(opts.wf_files, f)
-            if os.path.isfile(path):
-                wf_files.append(path)
-
-        try:
-            wf = Workflow(wf_files, opts.wf_file, opts.data_file)
-        except IOError:
-            wf = None
-            pass
-
-        if not wf:
-            print("Missing files in workflow")
-            exit()
-        
     try:
-        wsd = WSServer(("", opts.ws_port), on_newConnection)
-        wsd.start()
+        wsd   = WSServer(("", opts.ws_port), on_newConnection)
         httpd = HTTPServer(("", opts.http_port), RequestHandler)
+
         httpd.allow_reuse_address = True
         t = threading.Thread(target=httpd.serve_forever)
         t.setDaemon(True)
+
+        wsd.start()
         t.start()
-        print("Running HttpServer on port 8888")
+        Debug.msg("Running WebsocketServer on port %d" % opts.ws_port, ("SERVER", opts.ws_port))
+        Debug.msg("Running HttpServer on port %d" % opts.http_port, ("SERVER", opts.http_port))
 
         Sheduler.run()
 
     except(KeyboardInterrupt, SystemExit):
         print("Main: Interrupted.")
+        log_remaining(wf)
 
-#    except Exception as e:
-#        print("Main: Unknown exception %s occured" % type(e))
-#        print(e)
 
-#    finally:
-#        print()
-#        print("shutdown HttpServer")
-#        httpd.shutdown()
-#        print("shutdown WebSocketServer") 
-#        wsd.shutdown()
-#        exit()
+def parse_workflow(opts):
+    Debug.msg("Parsing workflow files ...")
+    wf       = None
+    wf_files = []
 
+    for f in os.listdir(opts.wf_files):
+        path = os.path.join(opts.wf_files, f)
+        if os.path.isfile(path):
+            wf_files.append(path)
+
+    try:
+        wf = Workflow(wf_files, opts.wf_file, opts.data_file, opts.recovery_path)
+
+        if opts.recovery_path:
+            wf.recover()
+          
+    except:
+        Debug.error("Workflow files missing")
+        exit()
+
+    log_tasks(wf)
+    return wf
+
+
+def log_tasks(workflow):
+    log_file = "tasks.log"
+    content  = []
+
+    for t in workflow.get_all_tasks():
+        content.append(t.path)
+
+        for d in t.dependencies:
+            content.append("  %s" % d.path)
+
+    Debug.log_file(log_file, content)
+
+
+def log_remaining(workflow):
+    log_file = "remaining.log"
+    content  = []
+
+    for task in workflow.get_all_tasks():
+        if not task.done:
+            content.append(task.path)
+
+    Debug.log_file(log_file, content)
 
 
 def on_newConnection(connection):

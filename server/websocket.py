@@ -27,7 +27,6 @@ class WSServer(threading.Thread):
 
 
     def run(self):
-        print("WebSocketServer running on port %d" % self.addr[1])
         self.sock.bind(self.addr)
         self.sock.listen(10)
         
@@ -40,6 +39,7 @@ class WSServer(threading.Thread):
                 else:
                     Debug.error(DEBUG.ERROR.CONNECTION_REFUSED, address)
         except OSError:
+            Debug.error(DEBUG.ERROR.CONNECTION_REFUSED, address)
             pass
 
 
@@ -58,7 +58,8 @@ class WSServer(threading.Thread):
     def send_to(self, address, data, callback=None):
         try:
             self.__connections[address].send_data(data, callback)
-        except IOError:
+        except (IOError, socket.error) as e:
+            print(e)
             self.__connections[address].shutdown()
             del self.__connections[address]
 
@@ -71,6 +72,7 @@ class WSConnection(threading.Thread):
     TEXT          = 1
     MAX_FRAG_SIZE = 2**63-1
     closed        = False
+    alive         = False
 
 
     def __init__(self, client, address):
@@ -86,10 +88,12 @@ class WSConnection(threading.Thread):
 
     def run(self):
         self.handshake()
-        while True:
+        #self.connection.settimeout(30)
+        while not self.closed:
             try:
                 self.receive()
-            except IOError:
+            except (IOError, socket.error) as e:
+                print(e)
                 self.shutdown()
                 break
 
@@ -107,6 +111,7 @@ class WSConnection(threading.Thread):
                     self.connection.send(msg.encode())
 
         Debug.log("Connection established", self.address)
+        alive = True
 
 
     def hash_key(self, key):
@@ -151,27 +156,38 @@ class WSConnection(threading.Thread):
             self.connection.send(last)
             Debug.log("%d bytes send" % len(data), self.address)
 
-        except IOError:
+        except IOError as e:
+            print(e)
             Debug.warn("failed to send data", self.address)
             self.shutdown()
+            pass
 
 
     def receive(self):
-        recv = self.connection.recv(1)
+        try:
+            recv = self.connection.recv(1)
 
-        if (len(recv) == 0):
-            Debug.log("received empty message", self.address)
-            return
+            if (len(recv) == 0):
+                Debug.log("received empty message", self.address)
+                return
 
-        fin      = recv[0] >> 7
-        op_code  = recv[0] %  2**4
+            fin      = recv[0] >> 7
+            op_code  = recv[0] %  2**4
 
-        if (op_code == 1) | (op_code == 2) | (op_code == 0):
-            self.recv_data(fin)
-        elif op_code == 8:
+            if (op_code == 1) | (op_code == 2) | (op_code == 0):
+                self.listener(self.recv_data(fin))
+            elif op_code == 8:
+                self.shutdown()
+            elif op_code == 9:
+                self.recv_ping()
+            elif op_code == 10:
+                self.recv_pong()
+            else:
+                Debug.warn("Not supported op_code", self.address)
+
+        except socket.timeout:
+            print(e)
             self.shutdown()
-        else:
-            Debug.warn("Not supported op_code", self.address)
 
 
     def recv_data(self, fin):
@@ -194,7 +210,7 @@ class WSConnection(threading.Thread):
             remaining -= len(recv)
 
         Debug.log("%d bytes received" % bytelength, self.address)
-        self.listener(data)
+        return data
 
 
     def get_bytelength(self, length):
@@ -216,24 +232,48 @@ class WSConnection(threading.Thread):
     def set_onClose(self, onClose):
         self.__onClose = onClose
 
-    def recv_ping(self):
-        Debug.log("Ping received", self.address)
 
+    def send_ping(self):
+        Debug.log("PING client", self.address)
+
+        #msg length has to be smaller than 126
+        msg   = "alive"
+        ping  = b'\x89'
+        ping += len(msg).to_bytes(1, byteorder="big")
+        ping += msg.encode()
+        self.connection.send(ping)
+
+
+    def recv_ping(self):
+        Debug.log("PING received", self.address)
+        self.alive = True
+        self.send_pong(self.recv_data(1))
+
+
+    def send_pong(self, data):
+        Debug.log("PONG client", self.address)
+        pong  = b'\x8A'
+        pong += len(data).to_bytes(1, byteorder="big") 
+        pong += data
+        self.connection.send(pong)
 
     def recv_pong(self):
-        Debug.log("Pong received", self.address)
+        Debug.log("PONG received", self.address)
+        self.alive = True
 
 
     def shutdown(self):
         if not self.closed:
-            if self.__onClose: self.__onClose()
+            self.closed = True
             try:
                 self.connection.shutdown(socket.SHUT_RDWR)
                 self.connection.close()
             except OSError:
                 pass
+            finally:
+                if self.__onClose:
+                    self.__onClose()
 
-            self.closed = True
             Debug.warn("Connection closed", self.address)
 
 
