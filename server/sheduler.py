@@ -1,5 +1,6 @@
 import time
 from server.logging import Debug
+from util.statistics import Statistics
 
 class Sheduler:
 
@@ -70,17 +71,14 @@ class Sheduler:
           Debug.msg("WORKFLOW %s DONE" % wf.wf_path, ("SHEDULER",1))
           Statistics.save_time_stats("%s/task_times.stats" % wf.wf_path, tasks, wf.START_TIME, time.time())
           
-        time.sleep(1)
-
-#TODO Dont clean machines if its already done
-      if alltasksdone:
-        for machine in Sheduler.machines:
-          for wf in Sheduler.workflows:
-            if not machine.is_busy():
-              machine.clean_workflow_files(wf.wf_path)
-            else:
-              Debug.log("machine is busy", ("SHEDULER", 1))
-              print("machine is busy")
+          for machine in Sheduler.machines:
+            while machine.is_busy():
+              time.sleep(0.1)
+            machine.clean_workflow_files(wf.wf_path)
+          
+          Sheduler.workflows.remove(wf) 
+          
+        time.sleep(0.1)
       time.sleep(0.1)
 
     tasks = Sheduler.workflows[0].get_all_tasks()

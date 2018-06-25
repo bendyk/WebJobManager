@@ -3,12 +3,15 @@ class Debug:
     CONNECTION_LOST    = 0
     CONNECTION_REFUSED = 1
 
-  def error(code, value):
+  def error(code, value=None):
 
-    if code == ERROR.CONNECTION_LOST:
-      print("ERROR: %s|%d: connection lost" % value)
-    elif code == ERROR.CONNECTION_REFUSED:
-      print("ERROR: %s|%d: connection refused" % value)
+    if not value:
+      print("ERROR: %s" % code)
+    else:
+      if code == ERROR.CONNECTION_LOST:
+        print("ERROR: %s|%d: connection lost" % value)
+      elif code == ERROR.CONNECTION_REFUSED:
+        print("ERROR: %s|%d: connection refused" % value)
 
 
   def warn(msg, address = ("", 2)):

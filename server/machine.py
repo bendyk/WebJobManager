@@ -111,7 +111,6 @@ class Machine:
 
     def process_file_request(self, data):
         file_id = data[:4];
-        print("process file: %d,%d,%d,%d" % (file_id[0],file_id[1],file_id[2],file_id[3]))
         f_path  = self.task.wf_path + "/" + data[4:].decode()
         Debug.log("requested file %s" % f_path, self.connection.address)
         f_path  = f_path.replace("\0", "")

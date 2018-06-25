@@ -158,10 +158,12 @@ class Workflow:
 
 
   def remaining_tasks(self):
+   
     remaining = 0
     for task in self.__tasks:
       if not task.done:
         remaining += 1
+    Debug.msg("%d/%d tasks done" % (len(self.__tasks)-remaining, len(self.__tasks)), ("", 0))
     return remaining
 
 
